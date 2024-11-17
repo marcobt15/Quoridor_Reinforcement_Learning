@@ -106,7 +106,7 @@ class Quoridor(AECEnv):
         if not active_agents:
             self.agents = []
 
-        self.rewards = {agent: 0 for agent in active_agents}
+        # self.rewards = {agent: 0 for agent in active_agents}
         if terminations:
             for agent, terminated in terminations.items():
                 if terminated:
@@ -148,21 +148,49 @@ class Quoridor(AECEnv):
         
         #Update action mask after move
         #up, down, left, right
-        action_mask_update = np.ones(4)
+        action_mask_update = np.ones(8)
         x, y = self.player_positions[agent]
-        if x == 0 or (y > 0 and self.wall_positions[x-1][y-1][0] == 1) or (y < 8 and self.wall_positions[x-1][y][0]) == 1:
+        if self.player_jump[agent] == False:
+                action_mask_update[0:4] = np.zeros(4)
+                
+        #cant jump or move up - edge of board
+        if x == 0 :
             action_mask_update[0] = 0
+            action_mask_update[4] = 0
+            
+        #check wall up -> cant move up
+        elif (y > 0 and self.wall_positions[x-1][y-1][0] == 1) or (y < 8 and self.wall_positions[x-1][y][0]== 1) :
+            action_mask_update[4] = 0
         
-        if x == 8 or (y > 0 and self.wall_positions[x][y-1][0] == 1) or (y < 8 and self.wall_positions[x][y][0] == 1):
+        #cant jump or move down - edge of board
+        if x == 8:
             action_mask_update[1] = 0
+            action_mask_update[5] = 0
+            
+        #check wall down -> cant move down
+        elif (y > 0 and self.wall_positions[x][y-1][0] == 1) or (y < 8 and self.wall_positions[x][y][0] == 1):
+            action_mask_update[5] = 0
         
-        if y == 0 or (x > 0 and self.wall_positions[x-1][y-1][1] == 1) or (x < 8 and self.wall_positions[x][y-1][1] == 1):
+        #cant jump or move left - edge of board
+        if y == 0:
             action_mask_update[2] = 0
+            action_mask_update[6] = 0
         
-        if y == 8 or (x > 0 and self.wall_positions[x-1][y][1] == 1) or (x < 8 and self.wall_positions[x][y][1] == 1):
+        #check wall left -> cant move left
+        elif (x > 0 and self.wall_positions[x-1][y-1][1] == 1) or (x < 8 and self.wall_positions[x][y-1][1] == 1):
+            action_mask_update[6] = 0
+        
+        #cant jump or move right - edge of board
+        if y == 8:
+            
             action_mask_update[3] = 0
+            action_mask_update[7] = 0
+            
+        #check wall right -> cant move right
+        elif (x > 0 and self.wall_positions[x-1][y][1] == 1) or (x < 8 and self.wall_positions[x][y][1] == 1):
+            action_mask_update[7] = 0
 
-        self.observation[agent]["action_mask"][4:8] = action_mask_update
+        self.observation[agent]["action_mask"][0:8] = action_mask_update
 
     #Done
     def _place_wall(self, agent, wall_index):
@@ -191,38 +219,38 @@ class Quoridor(AECEnv):
 
         if orientation == 0: #horizontal
             #up
-            if player_1_x + 1 == row and (player_1_y == col or player_1_y == col+1):
+            if player_1_x - 1 == row and (player_1_y == col or player_1_y == col-1):
                 player_1_action_mask_update[0] = 0
 
             #down
-            elif player_1_x == row and (player_1_y == col or player_1_y == col+1):
+            elif player_1_x == row and (player_1_y == col or player_1_y == col-1):
                 player_1_action_mask_update[1] = 0
             
             #repeat for player 2
             #up
-            if player_2_x + 1 == row and (player_2_y == col or player_2_y == col+1):
+            if player_2_x - 1 == row and (player_2_y == col or player_2_y == col-1):
                 player_2_action_mask_update[0] = 0
 
             #down
-            elif player_2_x == row and (player_2_y == col or player_2_y == col+1):
+            elif player_2_x == row and (player_2_y == col or player_2_y == col-1):
                 player_2_action_mask_update[1] = 0
 
         else: #vertical
             #left
-            if player_1_y -1 == col and (player_1_x == row or player_1_x == row+1):
+            if player_1_y - 1 == col and (player_1_x == row or player_1_x == row-1):
                 player_1_action_mask_update[2] = 0
 
             #right
-            if player_1_y == col and (player_1_x == row or player_1_x == row+1):
+            if player_1_y == col and (player_1_x == row or player_1_x == row-1):
                 player_1_action_mask_update[3] = 0
 
             #repeat for player 2
             #left
-            if player_2_y -1 == col and (player_2_x == row or player_2_x == row+1):
+            if player_2_y - 1 == col and (player_2_x == row or player_2_x == row-1):
                 player_2_action_mask_update[2] = 0
 
             #right
-            if player_2_y == col and (player_2_x == row or player_2_x == row+1):
+            if player_2_y == col and (player_2_x == row or player_2_x == row-1):
                 player_2_action_mask_update[3] = 0
 
         self.observation[self.possible_agents[0]]["action_mask"][4:8] = player_1_action_mask_update
