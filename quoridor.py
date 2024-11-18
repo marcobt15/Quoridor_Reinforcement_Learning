@@ -37,7 +37,7 @@ class Quoridor(AECEnv):
         self.rewards = {agent: 0 for agent in self.agents}
         self.terminations = {agent: False for agent in self.possible_agents}
         self.truncations = {agent: False for agent in self.possible_agents}  # Add terminations
-
+        self.reset()
 
     #Done
     def reset(self, seed=None, options=None):
@@ -55,87 +55,153 @@ class Quoridor(AECEnv):
         self.terminations = {agent: False for agent in self.possible_agents}  # Add terminations
         self.truncations = {agent: False for agent in self.possible_agents}  # Add terminations
 
-
-        player_1_action_mask = np.ones(4 + 4 + self.num_wall_positions)
-        player_1_action_mask[0] = 0
-        player_1_action_mask[4] = 0
-
-        player_2_action_mask = np.ones(4 + 4 + self.num_wall_positions)
-        player_2_action_mask[1] = 0
-        player_2_action_mask[5] = 0
-
-        self.observation = {
-            "player_1" : {
-                "observation": np.concatenate([np.array(self.player_positions["player_1"]), self.wall_positions.flatten()]),
-                "action_mask": player_1_action_mask
-            },
-
-            "player_2" : {
-                "observation": np.concatenate([np.array(self.player_positions["player_2"]), self.wall_positions.flatten()]),
-                "action_mask": player_2_action_mask
-            }
-        }
-        
         self.rewards = {agent: 0 for agent in self.agents}
-        self.infos = {agent: {} for agent in self.agents}
+
+        self.player_1_action_mask = np.ones(4 + 4 + self.num_wall_positions, dtype='int8')
+        self.player_1_action_mask[0] = 0
+        self.player_1_action_mask[4] = 0
+
+        self.player_2_action_mask = np.ones(4 + 4 + self.num_wall_positions, dtype='int8')
+        self.player_2_action_mask[1] = 0
+        self.player_2_action_mask[5] = 0
+
+        self.infos = {"player_1" : {"action_mask" : self.player_1_action_mask},
+                      "player_2" : {"action_mask" : self.player_2_action_mask}
+                    }
+        self.observation = self.get_observations(self.agent_selection)
+        
         return self.observation
 
+    def get_observations(self, agent):
+        """Generate observations for all agents."""
+
+        opponent = "player_1" if agent == "player_2" else "player_2"
+        # observations = { "observation" : 
+        #     np.concatenate([
+        #             np.array(self.player_positions[agent]),  # Player's position
+        #             np.array(self.player_positions[opponent]),  # Opponent's position
+        #             self.wall_positions.flatten(),  # Wall positions
+        #             [self.remaining_walls[agent]],  # Player's remaining walls
+        #             [self.remaining_walls[opponent]],  # Opponent's remaining walls
+        #             [int(self.player_jump[agent])],  # Player's jump availability
+        #             [int(self.player_jump[opponent])]  # Opponent's jump availability
+        #         ]),
+        #     # "action_mask": self.get_action_mask(agent)
+        # }
+
+        observation = np.concatenate([
+                    np.array(self.player_positions[agent]),  # Player's position
+                    np.array(self.player_positions[opponent]),  # Opponent's position
+                    self.wall_positions.flatten(),  # Wall positions
+                    [self.remaining_walls[agent]],  # Player's remaining walls
+                    [self.remaining_walls[opponent]],  # Opponent's remaining walls
+                    [int(self.player_jump[agent])],  # Player's jump availability
+                    [int(self.player_jump[opponent])]  # Opponent's jump availability
+                ])
+
+        return observation
+
+        # observations = {}
+        # for agent in self.agents:
+        #     opponent = "player_1" if agent == "player_2" else "player_2"
+        #     observations[agent] = {
+        #         "observation": np.concatenate([
+        #             np.array(self.player_positions[agent]),  # Player's position
+        #             np.array(self.player_positions[opponent]),  # Opponent's position
+        #             self.wall_positions.flatten(),  # Wall positions
+        #             [self.remaining_walls[agent]],  # Player's remaining walls
+        #             [self.remaining_walls[opponent]],  # Opponent's remaining walls
+        #             [int(self.player_jump[agent])],  # Player's jump availability
+        #             [int(self.player_jump[opponent])]  # Opponent's jump availability
+        #         ]),
+        #         "action_mask": self.get_action_mask(agent)
+        #     }
+        # return observations
+
+    def get_action_mask(self, agent):
+        if agent == "player_1":
+            # print(self.player_1_action_mask)
+            return self.player_1_action_mask
+        else:
+            # print(self.player_2_action_mask)
+            return self.player_2_action_mask
+
     def step(self, action):
+
         """Executes the selected action for the current agent."""
         """Assume that the action given is valid"""
         current_agent = self.agent_selection
 
-        if action < 4: # Pawn jump
-            self.player_jump[current_agent] = False
+        if current_agent == "player_1":
+            curr_action_mask = self.player_1_action_mask
+        else:
+            curr_action_mask = self.player_2_action_mask
 
-            #Removing players jump actions
-            self.observation[current_agent]["action_mask"][0:4] = np.zeros(4)
+        if curr_action_mask[action] == 1:
 
-        if action < 8:  # Pawn movement: 0/4=up, 1/5=down, 2/6=left, 3/7=right
-            self._move_pawn(current_agent, action)
-        else:  # Wall placement
-            wall_index = action - 8
-            self._place_wall(current_agent, wall_index)
+            if action < 4: # Pawn jump
+                self.player_jump[current_agent] = False
+
+                #Removing players jump actions
+                curr_action_mask[0:4] = np.zeros(4)
+
+            if action < 8:  # Pawn movement: 0/4=up, 1/5=down, 2/6=left, 3/7=right
+                self._move_pawn(current_agent, action)
+            else:  # Wall placement
+                wall_index = action - 8
+                self._place_wall(current_agent, wall_index)
 
         # Check game end conditions
-        terminations = self._check_termination()
+
+        terminations = self._check_termination(current_agent)
         truncations = {agent: self.timestep > 100 for agent in self.agents}
-        active_agents = [agent for agent in self.agents if not (terminations[agent] or truncations[agent])]
         
-        # If game ends, clear agents
-        if not active_agents:
-            self.agents = []
-
-        # self.rewards = {agent: 0 for agent in active_agents}
-        if terminations:
-            for agent, terminated in terminations.items():
-                if terminated:
-                    self.rewards[agent] = 1
-                    for other_agent in self.agents:
-                        if other_agent != agent:
-                            self.rewards[other_agent] = -1
-            # rewards = self._calculate_rewards()
-            # self.agents = []
+        self.rewards = {}
+        if terminations[current_agent]:
+            # Reward the winning agent
+            self.rewards[current_agent] = 1
+            # Penalize others
+            for other_agent in self.agents:
+                if other_agent != current_agent:
+                    self.rewards[other_agent] = -1
         else:
-            # Rotate to the next agent
-            self.agent_selection = self.agent_order.next()
+            for agent in self.agents:
+                self.rewards[agent] = 0
 
-            #UPDATE REWARDS HERE FOR NON TERMINATION REWARDS
-            self.rewards = {agent: 0 for agent in self.possible_agents}
+
+        # terminated_or_truncated_agents = {agent for agent in self.agents if terminations[agent] or truncations[agent]}
+        # self.agents = [agent for agent in self.agents if agent not in terminated_or_truncated_agents]
+        # # Rotate to the next agent, or clear agents if none are left
+        # if self.agents:
+        #     self.agent_selection = self.agent_selector.next()
+        # else:
+        #     self.agents = []
+        self.agent_selection = self.agent_selector.next()
+
 
         # Update timestep
         self.timestep += 1
 
         # Generate observations and return
-        observations = self.observation
-        self.terminations = terminations
-        self.truncations = truncations
+        observations = self.get_observations(current_agent)
+        
+        self.infos = {"player_1" : {"action_mask" : self.player_1_action_mask},
+                      "player_2" : {"action_mask" : self.player_2_action_mask}}
         infos = self.infos
-        return observations, self.rewards, terminations, truncations, infos
+
+        # for agent in terminated_or_truncated_agents:
+        #     self.rewards.pop(agent, None)
+
+        # # print(observations)
+        # print(terminations)
+
+        return observations, self.rewards[current_agent], terminations, truncations, infos
 
     #Done
     def _move_pawn(self, agent, direction):
         """Handles pawn movement based on the given direction."""
+
+        direction = direction % 4
         x, y = self.player_positions[agent]
         if direction == 0:      # Up
             self.player_positions[agent] = (x - 1, y)
@@ -153,11 +219,13 @@ class Quoridor(AECEnv):
         if self.player_jump[agent] == False:
                 action_mask_update[0:4] = np.zeros(4)
                 
+        print(agent, "moved to", x, y)
+    
         #cant jump or move up - edge of board
-        if x == 0 :
+        if x == 0:
             action_mask_update[0] = 0
             action_mask_update[4] = 0
-            
+        
         #check wall up -> cant move up
         elif (y > 0 and self.wall_positions[x-1][y-1][0] == 1) or (y < 8 and self.wall_positions[x-1][y][0]== 1) :
             action_mask_update[4] = 0
@@ -190,7 +258,10 @@ class Quoridor(AECEnv):
         elif (x > 0 and self.wall_positions[x-1][y][1] == 1) or (x < 8 and self.wall_positions[x][y][1] == 1):
             action_mask_update[7] = 0
 
-        self.observation[agent]["action_mask"][0:8] = action_mask_update
+        if agent == "player_1":
+            self.player_1_action_mask[0:8] = action_mask_update
+        else:
+            self.player_2_action_mask[0:8] = action_mask_update
 
     #Done
     def _place_wall(self, agent, wall_index):
@@ -199,23 +270,37 @@ class Quoridor(AECEnv):
         self.wall_positions[row, col, orientation] = 1
         self.remaining_walls[agent] -= 1
 
-        #update action mask for both agents
-        action_mask_player_1 = self.observation[self.possible_agents[0]]["action_mask"]
-        action_mask_player_2 = self.observation[self.possible_agents[1]]["action_mask"]
+        print(agent, "placed a wall")
+        print(agent, "has this many walls left", self.remaining_walls[agent])
+        print("wall was placed at", row, col, orientation)
 
-        action_mask_player_1[8 + wall_index] = 0
-        action_mask_player_2[8 + wall_index] = 0
+        if self.remaining_walls[agent] == 0:
+            if agent == "player_1":
+                self.player_1_action_mask[8:] = np.zeros(128)
+            else:
+                self.player_2_action_mask[8:] = np.zeros(128)
+        
+        #update action mask for both agents
+        # action_mask_player_1 = self.observation[self.possible_agents[0]]["action_mask"]
+        # action_mask_player_2 = self.observation[self.possible_agents[1]]["action_mask"]
+
+        self.player_1_action_mask[8 + wall_index] = 0
+        self.player_2_action_mask[8 + wall_index] = 0
 
         #If a wall is placed horizontally across a wall cannot be place veritcally going through it and vice versa
         opposite_orientation_wall_index = wall_index + 64 if orientation == 0 else wall_index - 64
-        action_mask_player_1[8 + opposite_orientation_wall_index] = 0
-        action_mask_player_2[8 + opposite_orientation_wall_index] = 0
+        self.player_1_action_mask[8 + opposite_orientation_wall_index] = 0
+        self.player_2_action_mask[8 + opposite_orientation_wall_index] = 0
 
         player_1_x, player_1_y = self.player_positions["player_1"]
         player_2_x, player_2_y = self.player_positions["player_2"]
 
-        player_1_action_mask_update = np.ones(4)
-        player_2_action_mask_update = np.ones(4)
+        #Add case where wall cannot be played because there isn't enought room
+        #remove adjacent wall placements (top/bottom of wall)
+        #also make sure wall cant be placed in between two walls
+
+        player_1_action_mask_update = self.player_1_action_mask[4:8]
+        player_2_action_mask_update = self.player_2_action_mask[4:8]
 
         if orientation == 0: #horizontal
             #up
@@ -237,24 +322,24 @@ class Quoridor(AECEnv):
 
         else: #vertical
             #left
-            if player_1_y - 1 == col and (player_1_x == row or player_1_x == row-1):
+            if player_1_y - 1 == col and (player_1_x == row or player_1_x == row+1):
                 player_1_action_mask_update[2] = 0
 
             #right
-            if player_1_y == col and (player_1_x == row or player_1_x == row-1):
+            if player_1_y == col and (player_1_x == row or player_1_x == row+1):
                 player_1_action_mask_update[3] = 0
 
             #repeat for player 2
             #left
-            if player_2_y - 1 == col and (player_2_x == row or player_2_x == row-1):
+            if player_2_y - 1 == col and (player_2_x == row or player_2_x == row+1):
                 player_2_action_mask_update[2] = 0
 
             #right
-            if player_2_y == col and (player_2_x == row or player_2_x == row-1):
+            if player_2_y == col and (player_2_x == row or player_2_x == row+1):
                 player_2_action_mask_update[3] = 0
 
-        self.observation[self.possible_agents[0]]["action_mask"][4:8] = player_1_action_mask_update
-        self.observation[self.possible_agents[1]]["action_mask"][4:8] = player_2_action_mask_update
+        self.player_1_action_mask[4:8] = player_1_action_mask_update
+        self.player_2_action_mask[4:8] = player_2_action_mask_update
 
     #Done
     def _decode_wall_index(self, index):
@@ -265,51 +350,58 @@ class Quoridor(AECEnv):
         col = index % (self.board_size - 1)
         return row, col, orientation
 
-    #not used right now
-    def _get_observation(self):
-        """Generates the observation for all agents."""
-        observations = {}
-        for agent in self.agents:
-            x, y = self.player_positions[agent]
-            walls = self.wall_positions.flatten()
-            observations[agent] = {
-                "observation": np.concatenate([[x, y], walls]),
-                "action_mask": self._get_action_mask(agent),
-            }
-        return observations
+    # #not used right now
+    # def _get_observation(self):
+    #     """Generates the observation for all agents."""
+    #     observations = {}
+    #     for agent in self.agents:
+    #         x, y = self.player_positions[agent]
+    #         walls = self.wall_positions.flatten()
+    #         observations[agent] = {
+    #             "observation": np.concatenate([[x, y], walls]),
+    #             "action_mask": self._get_action_mask(agent),
+    #         }
+    #     return observations
     
-    #not used right now
-    def _get_action_mask(self, agent):
-        """Generates an action mask for the given agent."""
-        action_mask = np.ones(4 + 4 + self.num_wall_positions, dtype=np.int8)
-        x, y = self.player_positions[agent]
+    # #not used right now
+    # def _get_action_mask(self, agent):
+    #     """Generates an action mask for the given agent."""
+    #     action_mask = np.ones(4 + 4 + self.num_wall_positions, dtype=np.int8)
+    #     x, y = self.player_positions[agent]
 
-        # prevent jumping twice
-        if not self.player_jump[agent]:
-            action_mask[0:4] = 0
-        # Prevent movement off the board
-        if x == 0:
-            action_mask[4] = 0  # No up
-        if x == self.board_size - 1:
-            action_mask[5] = 0  # No down
-        if y == 0:
-            action_mask[6] = 0  # No left
-        if y == self.board_size - 1:
-            action_mask[7] = 0  # No right
-        return action_mask
+    #     # prevent jumping twice
+    #     if not self.player_jump[agent]:
+    #         action_mask[0:4] = 0
+    #     # Prevent movement off the board
+    #     if x == 0:
+    #         action_mask[4] = 0  # No up
+    #     if x == self.board_size - 1:
+    #         action_mask[5] = 0  # No down
+    #     if y == 0:
+    #         action_mask[6] = 0  # No left
+    #     if y == self.board_size - 1:
+    #         action_mask[7] = 0  # No right
+    #     return action_mask
     
     #Done
-    def _check_termination(self):
+    def _check_termination(self, agent):
+
+        # if agent == "player_1":
+        #     if self.player_positions[agent][0] == 8:
+        #         return True
+
         """Checks if the game has ended."""
         terminations = {
             "player_1": self.player_positions["player_1"][0] == 8,
             "player_2": self.player_positions["player_2"][0] == 0
         }
 
+        # print(terminations)
+
         #apparently needs to remove the player?
-        for agent, terminated in terminations.items():
-            if terminated and agent in self.agents:
-                self.agents.remove(agent)
+        # for agent, terminated in terminations.items():
+        #     if terminated and agent in self.agents:
+        #         self.agents.remove(agent)
         return terminations
 
 
@@ -323,7 +415,7 @@ class Quoridor(AECEnv):
 
     def observe(self, agent):
         """Returns the observation for the specified agent."""
-        return self.observation[agent]["observation"]
+        return self.get_observations(agent)
 
     def last(self, observe=True):
         """Returns the observation, reward, termination, truncation, and info for the current agent."""
@@ -378,8 +470,9 @@ class Quoridor(AECEnv):
     # If your spaces change over time, remove this line (disable caching).
     @functools.lru_cache(maxsize=None)
     def observation_space(self, agent):
+        print("observation space being called")
         # gymnasium spaces are defined and documented here: https://gymnasium.farama.org/api/spaces/
-        return MultiDiscrete([self.board_size - 1, self.board_size - 1] + [2] * self.num_wall_positions + [2])
+        return MultiDiscrete([self.board_size, self.board_size, self.board_size, self.board_size] + [2] * self.num_wall_positions + [self.max_walls+1, self.max_walls+1, 2, 2])
 
 
     # Action space should be defined here.

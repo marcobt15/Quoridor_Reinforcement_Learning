@@ -1,5 +1,7 @@
 from quoridor import Quoridor
-from pettingzoo.test import api_test
+from other import CustomActionMaskedEnvironment
+from pettingzoo.test import api_test, parallel_api_test
+from quoridor2 import QuoridorEnv
 
 def test_render():
     # Initialize the Quoridor environment
@@ -45,5 +47,11 @@ def test_render():
 
 if __name__ == "__main__":
     # test_render()
+    # env = QuoridorEnv()
     env = Quoridor()
-    api_test(env, num_cycles=1_000_000)
+    # env.reset()
+    # print(env.last())
+    # print(env.observation_space("player_1"))
+    api_test(env, num_cycles=1, verbose_progress=True)
+    # env = CustomActionMaskedEnvironment()
+    # parallel_api_test(env, num_cycles=1_000_000)
