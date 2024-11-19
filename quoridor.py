@@ -263,12 +263,36 @@ class Quoridor(AECEnv):
         else:
             self.player_2_action_mask[0:8] = action_mask_update
 
-    #Done
     def _place_wall(self, agent, wall_index):
         """Places a wall at the given index if valid."""
         row, col, orientation = self._decode_wall_index(wall_index)
         self.wall_positions[row, col, orientation] = 1
         self.remaining_walls[agent] -= 1
+
+        ##CHECK IF WALLS NOW BLOCK A PLAYERS PATH TO THE END
+
+        #If a wall is placed horizontally across a wall cannot be place veritcally going through it and vice versa
+        opposite_orientation_wall_index = wall_index + 64 if orientation == 0 else wall_index - 64
+        self.player_1_action_mask[8 + opposite_orientation_wall_index] = 0
+        self.player_2_action_mask[8 + opposite_orientation_wall_index] = 0
+
+        #if a wall is placed at 5,5 for example then horizontal walls cannot be placed directly above or below
+        #same kind of case for vertical walls
+        if orientation == 0: #horizontal
+            if col != 0:
+                self.player_1_action_mask[wall_index-1] = 0
+                self.player_2_action_mask[wall_index-1] = 0
+            if col != 7:
+                self.player_1_action_mask[wall_index+1] = 0
+                self.player_2_action_mask[wall_index+1] = 0
+
+        else: #vertical
+            if row != 0:
+                self.player_1_action_mask[wall_index-8] = 0
+                self.player_2_action_mask[wall_index-8] = 0
+            if row != 7:
+                self.player_1_action_mask[wall_index+8] = 0
+                self.player_2_action_mask[wall_index+8] = 0
 
         print(agent, "placed a wall")
         print(agent, "has this many walls left", self.remaining_walls[agent])
@@ -279,25 +303,13 @@ class Quoridor(AECEnv):
                 self.player_1_action_mask[8:] = np.zeros(128)
             else:
                 self.player_2_action_mask[8:] = np.zeros(128)
-        
-        #update action mask for both agents
-        # action_mask_player_1 = self.observation[self.possible_agents[0]]["action_mask"]
-        # action_mask_player_2 = self.observation[self.possible_agents[1]]["action_mask"]
 
+        #update action mask for both agents
         self.player_1_action_mask[8 + wall_index] = 0
         self.player_2_action_mask[8 + wall_index] = 0
 
-        #If a wall is placed horizontally across a wall cannot be place veritcally going through it and vice versa
-        opposite_orientation_wall_index = wall_index + 64 if orientation == 0 else wall_index - 64
-        self.player_1_action_mask[8 + opposite_orientation_wall_index] = 0
-        self.player_2_action_mask[8 + opposite_orientation_wall_index] = 0
-
         player_1_x, player_1_y = self.player_positions["player_1"]
         player_2_x, player_2_y = self.player_positions["player_2"]
-
-        #Add case where wall cannot be played because there isn't enought room
-        #remove adjacent wall placements (top/bottom of wall)
-        #also make sure wall cant be placed in between two walls
 
         player_1_action_mask_update = self.player_1_action_mask[4:8]
         player_2_action_mask_update = self.player_2_action_mask[4:8]
@@ -349,39 +361,6 @@ class Quoridor(AECEnv):
         row = index // (self.board_size - 1)
         col = index % (self.board_size - 1)
         return row, col, orientation
-
-    # #not used right now
-    # def _get_observation(self):
-    #     """Generates the observation for all agents."""
-    #     observations = {}
-    #     for agent in self.agents:
-    #         x, y = self.player_positions[agent]
-    #         walls = self.wall_positions.flatten()
-    #         observations[agent] = {
-    #             "observation": np.concatenate([[x, y], walls]),
-    #             "action_mask": self._get_action_mask(agent),
-    #         }
-    #     return observations
-    
-    # #not used right now
-    # def _get_action_mask(self, agent):
-    #     """Generates an action mask for the given agent."""
-    #     action_mask = np.ones(4 + 4 + self.num_wall_positions, dtype=np.int8)
-    #     x, y = self.player_positions[agent]
-
-    #     # prevent jumping twice
-    #     if not self.player_jump[agent]:
-    #         action_mask[0:4] = 0
-    #     # Prevent movement off the board
-    #     if x == 0:
-    #         action_mask[4] = 0  # No up
-    #     if x == self.board_size - 1:
-    #         action_mask[5] = 0  # No down
-    #     if y == 0:
-    #         action_mask[6] = 0  # No left
-    #     if y == self.board_size - 1:
-    #         action_mask[7] = 0  # No right
-    #     return action_mask
     
     #Done
     def _check_termination(self, agent):
