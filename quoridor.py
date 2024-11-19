@@ -126,8 +126,8 @@ class Quoridor(AECEnv):
             # print(self.player_2_action_mask)
             return self.player_2_action_mask
 
+    #Doesn't return anything, just update states in the object so last() can use them
     def step(self, action):
-
         """Executes the selected action for the current agent."""
         """Assume that the action given is valid"""
         current_agent = self.agent_selection
@@ -181,21 +181,15 @@ class Quoridor(AECEnv):
 
         # Update timestep
         self.timestep += 1
-
-        # Generate observations and return
-        observations = self.get_observations(current_agent)
         
         self.infos = {"player_1" : {"action_mask" : self.player_1_action_mask},
                       "player_2" : {"action_mask" : self.player_2_action_mask}}
-        infos = self.infos
 
         # for agent in terminated_or_truncated_agents:
         #     self.rewards.pop(agent, None)
 
         # # print(observations)
         # print(terminations)
-
-        return observations, self.rewards[current_agent], terminations, truncations, infos
 
     #Done
     def _move_pawn(self, agent, direction):
@@ -442,6 +436,11 @@ class Quoridor(AECEnv):
         # Print the grid row by row
         for row in render_grid:
             print("".join(row))
+
+    #If render is defined then close has to be defined
+    #render doesn't open any windows (so far) so it doesn't need to do anything
+    def close(self):
+        pass
 
 
     # Observation space should be defined here.
