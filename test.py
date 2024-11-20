@@ -52,6 +52,6 @@ if __name__ == "__main__":
     # env.reset()
     # print(env.last())
     # print(env.observation_space("player_1"))
-    api_test(env, num_cycles=1000, verbose_progress=True)
+    api_test(env, num_cycles=1000000, verbose_progress=True)
     # env = CustomActionMaskedEnvironment()
     # parallel_api_test(env, num_cycles=1_000_000)

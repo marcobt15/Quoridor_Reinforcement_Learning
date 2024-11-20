@@ -36,7 +36,8 @@ class Quoridor(AECEnv):
 
         self.rewards = {agent: 0 for agent in self.agents}
         self.terminations = {agent: False for agent in self.possible_agents}
-        self.truncations = {agent: False for agent in self.possible_agents}  # Add terminations
+        self.truncations = {agent: False for agent in self.possible_agents}
+        self._cumulative_rewards = {agent: 0 for agent in self.possible_agents}
         self.reset()
 
     #Done
@@ -52,8 +53,9 @@ class Quoridor(AECEnv):
         self.remaining_walls = {"player_1": self.max_walls, "player_2": self.max_walls}
         self.wall_positions = np.zeros((self.board_size-1, self.board_size-1, 2))
 
-        self.terminations = {agent: False for agent in self.possible_agents}  # Add terminations
-        self.truncations = {agent: False for agent in self.possible_agents}  # Add terminations
+        self.terminations = {agent: False for agent in self.possible_agents}
+        self.truncations = {agent: False for agent in self.possible_agents} 
+        self._cumulative_rewards = {agent: 0 for agent in self.possible_agents}
 
         self.rewards = {agent: 0 for agent in self.agents}
 
@@ -132,12 +134,19 @@ class Quoridor(AECEnv):
         """Assume that the action given is valid"""
         current_agent = self.agent_selection
 
+        if (
+            self.terminations[current_agent]
+            or self.truncations[current_agent]
+        ):
+            self._was_dead_step(action)
+            return
+
         if current_agent == "player_1":
             curr_action_mask = self.player_1_action_mask
         else:
             curr_action_mask = self.player_2_action_mask
 
-        if curr_action_mask[action] == 1:
+        if action and curr_action_mask[action] == 1:
 
             if action < 4: # Pawn jump
                 self.player_jump[current_agent] = False
@@ -152,44 +161,35 @@ class Quoridor(AECEnv):
                 self._place_wall(current_agent, wall_index)
 
         # Check game end conditions
-
-        terminations = self._check_termination(current_agent)
-        truncations = {agent: self.timestep > 100 for agent in self.agents}
+        if self.timestep >= 100:
+            print('HAS TRUNCATED ON', current_agent)
+            
+            self.truncations = {"player_1" : True, "player_2" : True}
         
+        terminations = self._check_termination(current_agent)
         self.rewards = {}
         if terminations[current_agent]:
             # Reward the winning agent
             self.rewards[current_agent] = 1
+            self._cumulative_rewards[agent] += 1
             # Penalize others
             for other_agent in self.agents:
                 if other_agent != current_agent:
                     self.rewards[other_agent] = -1
+                    self._cumulative_rewards[other_agent] += -1
+            
         else:
             for agent in self.agents:
                 self.rewards[agent] = 0
+                self._cumulative_rewards[agent] += 0
 
-
-        # terminated_or_truncated_agents = {agent for agent in self.agents if terminations[agent] or truncations[agent]}
-        # self.agents = [agent for agent in self.agents if agent not in terminated_or_truncated_agents]
-        # # Rotate to the next agent, or clear agents if none are left
-        # if self.agents:
-        #     self.agent_selection = self.agent_selector.next()
-        # else:
-        #     self.agents = []
         self.agent_selection = self.agent_selector.next()
-
 
         # Update timestep
         self.timestep += 1
         
         self.infos = {"player_1" : {"action_mask" : self.player_1_action_mask},
                       "player_2" : {"action_mask" : self.player_2_action_mask}}
-
-        # for agent in terminated_or_truncated_agents:
-        #     self.rewards.pop(agent, None)
-
-        # # print(observations)
-        # print(terminations)
 
     #Done
     def _move_pawn(self, agent, direction):
@@ -448,7 +448,6 @@ class Quoridor(AECEnv):
     # If your spaces change over time, remove this line (disable caching).
     @functools.lru_cache(maxsize=None)
     def observation_space(self, agent):
-        print("observation space being called")
         # gymnasium spaces are defined and documented here: https://gymnasium.farama.org/api/spaces/
         return MultiDiscrete([self.board_size, self.board_size, self.board_size, self.board_size] + [2] * self.num_wall_positions + [self.max_walls+1, self.max_walls+1, 2, 2])
 
