@@ -1,7 +1,5 @@
 from quoridor import Quoridor
-from other import CustomActionMaskedEnvironment
 from pettingzoo.test import api_test, parallel_api_test
-from quoridor2 import QuoridorEnv
 
 def test_render():
     # Initialize the Quoridor environment

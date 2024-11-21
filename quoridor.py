@@ -6,6 +6,7 @@ from gymnasium.spaces import Discrete, MultiDiscrete
 
 from pettingzoo import AECEnv
 from pettingzoo.utils import agent_selector
+from a_star import a_star
 
 class Quoridor(AECEnv):
     """The metadata holds environment constants.
@@ -133,6 +134,20 @@ class Quoridor(AECEnv):
         """Executes the selected action for the current agent."""
         """Assume that the action given is valid"""
         current_agent = self.agent_selection
+        
+        #call A* for current player
+        optimal_path, cost = a_star(self.player_positions[current_agent], current_agent, self.wall_positions)
+        if cost == -1:
+            print("no valid path found") #need to use this check for valid moves
+        else:
+            optimal_move = optimal_path[1]
+            
+        #after we make step, check if optimal move is the one agent made, then add rewards
+            
+        print(f"current player position{self.player_positions[current_agent]}")
+        print(f"optimal path for:{current_agent} is {optimal_path}, cost is {cost}")
+        print(f"optimal move for:{current_agent} is {optimal_move}")
+
 
         if (
             self.terminations[current_agent]

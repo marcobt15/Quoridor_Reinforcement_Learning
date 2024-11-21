@@ -1,151 +1,168 @@
-import heapq #in standard library
-import copy #in standard library
-import pandas as pd
+import heapq
+from collections import deque
+import numpy as np
 
-#This class stores the information that will be used in the frontier
-class State:
-    def __init__(self, grid, heuristic, curr_location, num_keys = 0, path_cost = 0, path = []):
-        self.path = path + [curr_location] #Stores the path from start to itself
-        self.h = heuristic
-        self.path_cost = path_cost
-        self.grid = grid
-        self.location = curr_location
-        self.num_keys = num_keys
+#agent can move up down left right
+DIRECTIONS = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # up, down, left, right
 
-    def getPriorityValue(self):
-        return self.path_cost + self.h
-    
-    #This is used for equality of two states
-    def __eq__(self, other):
-        return self.location == other.location and self.num_keys == other.num_keys
-    
-    #This is used for the order of the priority queue
+class Node:
+    def __init__(self, position, parent=None, g=0, h=0):
+        self.position = position
+        self.parent = parent
+        self.g = g      #current cost
+        self.h = h      #heuristic
+        self.f = g + h  #totla cost
+
     def __lt__(self, other):
-        if self.getPriorityValue() == other.getPriorityValue():
-            return self.h < other.h
-        return self.getPriorityValue() < other.getPriorityValue()
+        return self.f < other.f
 
+def findGoal(board_size, player):
+    #player 1, goal is the 8th row
+    if player == 'player_1':
+        goal_row = 8
+    else:
+        #player two goal is 0th row
+        goal_row = 0  
 
-#Retrieves the start and goal positions from the grid
-def findStartAndGoal(grid):
-    goals = []
-    for row in range(len(grid)):
-        for col in range(len(grid[row])):
-            if grid[row][col] == "S":
-                start = (row, col)
-            elif grid[row][col] == "G":
-                goals.append((row, col))
+    #the entire row for a given agent is the 0 or 8th row
+    goals = [(goal_row, col) for col in range(board_size)]  
 
-    return start, goals
+    return goals
 
-#Returns the heuristic given the current position and goal
-#The heuristic chosen is manhattan distance
-def getHeuristic(curr_position, goals):
-    shortest_m_dist = -1 #illegal move
-    for goal in goals:
-        m_dist_to_goal = abs(curr_position[0] - goal[0]) + abs(curr_position[1] - goal[1])
-        if  m_dist_to_goal < shortest_m_dist and m_dist_to_goal > -1:
-            shortest_m_dist = m_dist_to_goal
-    return shortest_m_dist
-
-#Checks if a point exists on the grid
-def valid_point(point, row_length, col_length):
-    if point[0] < 0 or point[1] < 0 or point[0] >= row_length or point[1] >= col_length:
-        return False
-    return True
-
-#Gets the valid neighbours of a given location
-def getNeighbours(grid, curr_location, has_key):
-    directions = [(1,0), (0,1), (0,-1), (-1, 0)] #The four moveable directions
-
-    neighbours = []
-
-    for direction in directions:
-        #adds the curr_location and direction tuples
-        new_point = tuple(a + b for a, b in zip(direction, curr_location))
-
-        #checks if the new point is valid
-        #checks if the new point isn't a door, or if it a door then check if you have a key to open it
-        if valid_point(new_point, len(grid), len(grid[0])) and (grid[new_point[0]][new_point[1]] != 'D' or has_key):
-            #If all checks pass, then it is a valid neighbour
-            neighbours.append(new_point)
+def a_star(start, current_agent, walls, board_size=9):
+    walls = get_walls(board_size, walls)
     
-    return neighbours
+    goals = findGoal(board_size, current_agent)
+    
+    #start node is current agent start and hueirstic is based off of all goal states
+    start_node = Node(start, None, 0, heuristic(start, goals))
+    
+    #priority queue
+    frontier = [start_node]
+    explored = set()
 
-
-# The pathfinding function must implement A* search to find the goal state
-def pathfinding(grid):
-    start_grid = grid
-    start_pos, goals_pos = findStartAndGoal(start_grid)
-
-    # optimal_path is a list of coordinate of squares visited (in order)
-    optimal_path = []
-    # optimal_path_cost is the cost of the optimal path
-    optimal_path_cost = 0
-    # num_states_explored is the number of states explored during A* search
-    num_states_explored = 0
-
-    start_heuristic = getHeuristic(start_pos, goals_pos)
-    start_state = State(start_grid, start_heuristic, start_pos)
-
-    frontier = [start_state]
-    explored = set() #for easy lookup
-
-    while True:
-        #There should be a solution
-        if frontier == []:
-            return [], -1, -1
+    while frontier:
+        #get lowest f value
+        current_node = heapq.heappop(frontier)
         
-        #use heapq to pop off best priority
-        curr_state = heapq.heappop(frontier)
-        num_states_explored += 1
+        #goal state, rebuild path
+        if current_node.position in goals:
+            path, cost = reconstruct_path(current_node)
+            return (path, cost) 
 
-        if curr_state.location in goals_pos:
-            #curr_state stores the path cost and optimal path
-            optimal_path_cost = curr_state.path_cost
-            optimal_path = curr_state.path
-            break
+        explored.add(current_node.position)
 
-        # (x, y) + (num_keys, ) = (x, y, num_keys), easy way to concatenate tuples
-        explored.add(curr_state.location + (curr_state.num_keys, ))
+        #check neighbours, loop though possible directions and check that square for neighbour
+        for direction in DIRECTIONS:
+            neighbour_pos = (current_node.position[0] + direction[0], current_node.position[1] + direction[1])
 
-        curr_grid = curr_state.grid
+            #if out of bounds, skip neighbours
+            if not is_valid_position(neighbour_pos, board_size):
+                continue
 
-        for node in getNeighbours(curr_state.grid, curr_state.location, curr_state.num_keys > 0):
-            
-            new_grid = copy.deepcopy(curr_grid)
-            new_grid[node[0]][node[1]] = 'O'
+            #do check for wall, if neighbour is wall, skip
+            if is_wall_blocking(current_node.position, neighbour_pos, walls):
+                continue
 
-            new_heuristic = getHeuristic(node, goals_pos)
-            
-            curr_keys = curr_state.num_keys
-            if curr_grid[node[0]][node[1]] == 'K':
-                curr_keys += 1
-            elif curr_grid[node[0]][node[1]] == 'D':
-                curr_keys -= 1
-            
-            new_path_cost = curr_state.path_cost + 1 #weight between two nodes will always be one
-            
-            new_state = State(new_grid, new_heuristic, node, curr_keys, new_path_cost, curr_state.path)
+            #if already visited, skip
+            if neighbour_pos in explored:
+                continue
 
-            #Checking for repeat states
-            same_state = False
-            for state in frontier:
-                if new_state == state and new_path_cost < state.path_cost:
-                    same_state = True
-                    del new_state
-                    new_state = copy.deepcopy(state)
-                    #Since the path we're taking right now is better, update the path cost and path
-                    new_state.path_cost = new_path_cost 
-                    new_state.path = curr_state.path + [node]
-                    break
-            
-            #If we've taken from the frontier or the new_state isn't in the frontier and isn't in explored
-            if same_state or (new_state not in frontier and node + (curr_keys, ) not in explored):
-                heapq.heappush(frontier, new_state)
+            #calculate g and h values, every move cost = 1
+            g = current_node.g + 1  
+            h = heuristic(neighbour_pos, goals)
 
-    return optimal_path, optimal_path_cost, num_states_explored
+            neighbor_node = Node(neighbour_pos, current_node, g, h)
 
-def a_star(grid):
-    optimal_path, optimal_path_cost, _ = pathfinding(grid)
-    return optimal_path, optimal_path_cost
+            #add to frontier if not already there
+            if not any(neighbor_node.position == n.position and neighbor_node.f >= n.f for n in frontier):
+                heapq.heappush(frontier, neighbor_node)
+
+    #no path found, important for checking valid moves
+    return (-1, -1) 
+
+def is_valid_position(position, board_size):
+    x, y = position
+    return 0 <= x < board_size and 0 <= y < board_size
+
+def heuristic(position, goals):
+    #min distance to any of the goal states
+    return min(abs(position[0] - goal[0]) + abs(position[1] - goal[1]) for goal in goals)
+
+def reconstruct_path(node):
+    path = []
+    cost = 0
+    while node:
+        cost += 1
+        path.append(node.position)
+        node = node.parent
+        #reverse path and return cost
+    return path[::-1], cost 
+
+def is_wall_blocking(curr_pos, neighbor_pos, walls):
+    x1, y1 = curr_pos
+    x2, y2 = neighbor_pos
+
+    #horizontal (left/right)
+    if x1 == x2: 
+        if y1 > y2:  #left
+            return (x1, y2, '1') in walls
+        else:  #right
+            return (x1, y1, '1') in walls
+
+    #vertical (up/down)
+    elif y1 == y2:
+        if x1 > x2:  #move up
+            return (x2, y1, '0') in walls
+        else:  #down
+            return (x1, y1, '0') in walls
+
+    return False
+
+
+def get_walls(board_size, wall_positions):
+    walls = set()
+    for i in range(board_size - 1):
+        for j in range(board_size - 1):
+            if wall_positions[i][j][0] == 1:  #horizontal wall
+                walls.add((i, j, '0'))  #normalpiece
+                walls.add((i, j + 1, '0'))  #extended piece
+            if wall_positions[i][j][1] == 1:  #vertical wall
+                walls.add((i, j, '1'))  # Original wall
+                walls.add((i + 1, j, '1'))  #extended piece
+    return walls
+
+
+def test_a_star():
+    """Test the a_star function with a simple board setup."""
+    board_size = 9
+
+    wall_positions = np.zeros((8, 8, 2), dtype=int)
+    wall_positions[0][4][0] = 1  #hwall at (0, 4)
+    wall_positions[0][5][1] = 1  #v wall at (0, 5)
+    wall_positions[0][3][1] = 1
+    # Convert walls to the usable format
+    walls = get_walls(board_size, wall_positions)
+
+    # Player positions
+    player_1_start = (0, 4)
+    player_2_start = (8, 4)
+
+    # Test A* for player 1
+    print("Testing A* for Player 1...")
+    path, cost = a_star(player_1_start, 'player_1', wall_positions, board_size)
+    print(f"Player 1 Path: {path}, Cost: {cost}")
+
+    # Test A* for player 2
+    print("\nTesting A* for Player 2...")
+    path, cost = a_star(player_2_start, 'player_2', wall_positions, board_size)
+    print(f"Player 2 Path: {path}, Cost: {cost}")
+
+    # Test movement checks
+    print("\nTesting movement checks...")
+    print(f"Player 1 trying to move right from, (false means move failed): (0,5), (0, 6)",
+          not is_wall_blocking((0,5), (0, 6), walls))
+    print(f"Player 1 trying to move down from, (false means move failed) (0,5), (1, 5):",
+          not is_wall_blocking((0,5), (1, 5), walls))
+
+# test_a_star()
