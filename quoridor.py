@@ -7,6 +7,10 @@ from gymnasium.spaces import Discrete, MultiDiscrete
 from pettingzoo import AECEnv
 from pettingzoo.utils import agent_selector
 from a_star import a_star
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+
+import pygame
 
 class Quoridor(AECEnv):
     """The metadata holds environment constants.
@@ -144,9 +148,9 @@ class Quoridor(AECEnv):
             
         #after we make step, check if optimal move is the one agent made, then add rewards
             
-        print(f"current player position{self.player_positions[current_agent]}")
-        print(f"optimal path for:{current_agent} is {optimal_path}, cost is {cost}")
-        print(f"optimal move for:{current_agent} is {optimal_move}")
+        # print(f"current player position{self.player_positions[current_agent]}")
+        # print(f"optimal path for:{current_agent} is {optimal_path}, cost is {cost}")
+        # print(f"optimal move for:{current_agent} is {optimal_move}")
 
 
         if (
@@ -417,40 +421,60 @@ class Quoridor(AECEnv):
 
 
     def render(self):
-        """Renders the board with players, walls, and spaces."""
-        # Define a filler character for empty cells
-        filler = "O"
-        horizontal_wall = "--"
-        vertical_wall = "|"
-        empty_space = "  "  # Empty space for spacing
+        """Renders the board using pygame."""
+        # Initialize pygame window
+        pygame.init()
+        window_size = 800
+        cell_size = window_size // self.board_size
+        screen = pygame.display.set_mode((window_size, window_size))
+        pygame.display.set_caption("Board Render")
+        screen.fill((255, 255, 255))  # White background
 
-        # Create an empty grid that accommodates spaces and walls
-        render_grid = [[" " for _ in range(self.board_size * 2 - 1)] for _ in range(self.board_size * 2 - 1)]
+        # Colors
+        black = (0, 0, 0)
+        blue = (0, 0, 255)
+        red = (255, 0, 0)
+        brown = (139, 69, 19)
+        white = (255, 255, 255)
 
-        # Place the players
+        # Draw the grid
+        for x in range(self.board_size + 1):
+            pygame.draw.line(screen, black, (0, x * cell_size), (window_size, x * cell_size), 1)  # Horizontal lines
+            pygame.draw.line(screen, black, (x * cell_size, 0), (x * cell_size, window_size), 1)  # Vertical lines
+
+        # Draw the players
         for agent, (x, y) in self.player_positions.items():
-            render_grid[x * 2][y * 2] = agent[0].upper()
+            center_x = y * cell_size + cell_size // 2
+            center_y = x * cell_size + cell_size // 2
+            color = blue if agent.lower() == "player_1" else red
+            pygame.draw.circle(screen, color, (center_x, center_y), cell_size // 3)
+            pygame.draw.circle(screen, black, (center_x, center_y), cell_size // 3, 2)  # Outline
+            font = pygame.font.Font(None, cell_size // 2)
+            text = font.render("P1" if agent == 'player_1' else 'P2', True, white)
+            text_rect = text.get_rect(center=(center_x, center_y))
+            screen.blit(text, text_rect)
 
-        # Add horizontal and vertical walls
+        # Draw the walls
         for row in range(self.board_size - 1):
             for col in range(self.board_size - 1):
                 if self.wall_positions[row, col, 0] == 1:  # Horizontal wall
-                    render_grid[row * 2 + 1][col * 2] = horizontal_wall
-                    render_grid[row * 2 + 1][col * 2+1] = horizontal_wall
+                    start_pos = (col * cell_size, row * cell_size + cell_size)
+                    end_pos = (start_pos[0] + 2 * cell_size, start_pos[1])
+                    pygame.draw.line(screen, brown, start_pos, end_pos, 5)
                 if self.wall_positions[row, col, 1] == 1:  # Vertical wall
-                    render_grid[row * 2][col * 2 + 1] = vertical_wall
-                    render_grid[row * 2+2][col * 2 + 1] = vertical_wall
+                    start_pos = (col * cell_size + cell_size, row * cell_size)
+                    end_pos = (start_pos[0], start_pos[1] + 2 * cell_size)
+                    pygame.draw.line(screen, brown, start_pos, end_pos, 5)
+
+        # Update display
+        pygame.display.flip()
+
+        # Wait for a short time to visualize the render
+        pygame.time.wait(5000)
+        pygame.quit()
 
 
-        # Fill remaining spaces with filler
-        for row in range(0, len(render_grid), 2):
-            for col in range(0, len(render_grid[row]), 2):
-                if render_grid[row][col] == " ":
-                    render_grid[row][col] = filler
 
-        # Print the grid row by row
-        for row in render_grid:
-            print("".join(row))
 
     #If render is defined then close has to be defined
     #render doesn't open any windows (so far) so it doesn't need to do anything

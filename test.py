@@ -1,5 +1,6 @@
 from quoridor import Quoridor
 from pettingzoo.test import api_test, parallel_api_test
+import pygame
 
 def test_render():
     # Initialize the Quoridor environment
@@ -23,6 +24,7 @@ def test_render():
     print("=== Test Case 3: Horizontal Wall Placed ===")
     env.reset()
     env.wall_positions[3, 4, 0] = 1  # Place horizontal wall at row 3, col 4
+    env.wall_positions[3, 6, 0] = 1
     env.render()
     print("\n")
 
@@ -44,12 +46,12 @@ def test_render():
     print("\n")
 
 if __name__ == "__main__":
-    # test_render()
+    test_render()
     # env = QuoridorEnv()
     env = Quoridor()
     # env.reset()
     # print(env.last())
     # print(env.observation_space("player_1"))
-    api_test(env, num_cycles=1000000, verbose_progress=True)
+    # api_test(env, num_cycles=1000000, verbose_progress=True)
     # env = CustomActionMaskedEnvironment()
     # parallel_api_test(env, num_cycles=1_000_000)
