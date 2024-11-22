@@ -133,14 +133,59 @@ def get_walls(board_size, wall_positions):
     return walls
 
 
+def test_new_walls(player_positions, curr_wall_positions, player_1_action_mask, player_2_action_mask):
+    player_1_pos = player_positions["player_1"]
+    player_2_pos = player_positions["player_2"]
+
+    horizontal_walls = curr_wall_positions[:, :, 0]
+    vertical_walls = curr_wall_positions[:, :, 1]
+    horizontal_flatten = horizontal_walls.flatten()
+    vertical_flatten = vertical_walls.flatten()
+
+    walls = np.concatenate([horizontal_flatten, vertical_flatten])
+
+    for index, wall in enumerate(walls):
+        #if there is already a wall there, don't test the position
+        if wall == 1 or (player_1_action_mask[8 + index] == 0 and player_2_action_mask[8+index] == 0):
+            continue
+    
+        row, col, orientation = decode_wall_index(index)
+        
+        curr_wall_positions[row, col, orientation] = 1
+        
+        if player_1_action_mask[8 + index] == 1:
+            _, path_cost = a_star(player_1_pos, "player_1", curr_wall_positions)
+            if path_cost == -1:
+                player_1_action_mask[8 + index] = 0
+                player_2_action_mask[8 + index] = 0
+                curr_wall_positions[row, col, orientation] = 0
+                continue
+        
+        if player_2_action_mask[8 + index] == 1:
+            path_cost, _ = a_star(player_2_pos, "player_2", curr_wall_positions)
+            if path_cost == -1:
+                player_1_action_mask[8 + index] = 0
+                player_2_action_mask[8 + index] = 0
+
+        curr_wall_positions[row, col, orientation] = 0
+        
+def decode_wall_index(index):
+    """Decodes a wall index into row, col, and orientation."""
+    orientation = 0 if index < 64 else 1
+    index = index % 64
+    row = index // 8
+    col = index % 8
+    return row, col, orientation
+
+
 def test_a_star():
     """Test the a_star function with a simple board setup."""
     board_size = 9
 
     wall_positions = np.zeros((8, 8, 2), dtype=int)
-    wall_positions[0][4][0] = 1  #hwall at (0, 4)
-    wall_positions[0][5][1] = 1  #v wall at (0, 5)
-    wall_positions[0][3][1] = 1
+    wall_positions[0][3][1] = 1  
+    wall_positions[1][3][0] = 1  
+    wall_positions[0][4][1] = 1
     # Convert walls to the usable format
     walls = get_walls(board_size, wall_positions)
 

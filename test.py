@@ -1,6 +1,7 @@
 from quoridor import Quoridor
-from pettingzoo.test import api_test, parallel_api_test
-import pygame
+from pettingzoo.test import api_test
+from a_star import test_new_walls
+import numpy as np
 
 def test_render():
     # Initialize the Quoridor environment
@@ -46,12 +47,16 @@ def test_render():
     print("\n")
 
 if __name__ == "__main__":
-    test_render()
-    # env = QuoridorEnv()
+    # test_render()
     env = Quoridor()
-    # env.reset()
-    # print(env.last())
-    # print(env.observation_space("player_1"))
-    # api_test(env, num_cycles=1000000, verbose_progress=True)
-    # env = CustomActionMaskedEnvironment()
-    # parallel_api_test(env, num_cycles=1_000_000)
+    api_test(env, num_cycles=100, verbose_progress=True)
+
+    # player_positions = {"player_1": (0, 4), "player_2": (8, 4)}
+    # wall_positions = np.zeros((8, 8, 2)) #horizontal then vertical
+    # wall_positions[0][3][1] = 1
+    # wall_positions[1][3][0] = 1
+    # player_1_action_map = np.ones(136)
+    # player_2_action_map = np.ones(136)
+    # test_new_walls(player_positions, wall_positions, player_1_action_map, player_2_action_map)
+    # print(player_1_action_map)
+    # print(player_2_action_map)

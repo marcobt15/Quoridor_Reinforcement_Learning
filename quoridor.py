@@ -5,12 +5,19 @@ import numpy as np
 from gymnasium.spaces import Discrete, MultiDiscrete
 
 from pettingzoo import AECEnv
-from pettingzoo.utils import agent_selector
-from a_star import a_star
+from pettingzoo.utils import agent_selector, wrappers
+from a_star import a_star, test_new_walls
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
 import pygame
+
+def env(**kwargs):
+    env = Quoridor(**kwargs)
+    env = wrappers.TerminateIllegalWrapper(env, illegal_reward=-1)
+    env = wrappers.AssertOutOfBoundsWrapper(env)
+    env = wrappers.OrderEnforcingWrapper(env)
+    return env
 
 class Quoridor(AECEnv):
     """The metadata holds environment constants.
@@ -18,9 +25,9 @@ class Quoridor(AECEnv):
     The "name" metadata allows the environment to be pretty printed.
     """
 
-    metadata = {"render.modes": ["human"], "name": "quoridor_aec_v0"}
+    metadata = {"name": "quoridor_aec_v0"}
     #Done
-    def __init__(self):
+    def __init__(self, args=None):
         """Initialize the AEC Quoridor environment."""
         self.board_size = 9
         self.max_walls = 10  # Number of walls each player can place
@@ -83,18 +90,6 @@ class Quoridor(AECEnv):
         """Generate observations for all agents."""
 
         opponent = "player_1" if agent == "player_2" else "player_2"
-        # observations = { "observation" : 
-        #     np.concatenate([
-        #             np.array(self.player_positions[agent]),  # Player's position
-        #             np.array(self.player_positions[opponent]),  # Opponent's position
-        #             self.wall_positions.flatten(),  # Wall positions
-        #             [self.remaining_walls[agent]],  # Player's remaining walls
-        #             [self.remaining_walls[opponent]],  # Opponent's remaining walls
-        #             [int(self.player_jump[agent])],  # Player's jump availability
-        #             [int(self.player_jump[opponent])]  # Opponent's jump availability
-        #         ]),
-        #     # "action_mask": self.get_action_mask(agent)
-        # }
 
         observation = np.concatenate([
                     np.array(self.player_positions[agent]),  # Player's position
@@ -108,29 +103,13 @@ class Quoridor(AECEnv):
 
         return observation
 
-        # observations = {}
-        # for agent in self.agents:
-        #     opponent = "player_1" if agent == "player_2" else "player_2"
-        #     observations[agent] = {
-        #         "observation": np.concatenate([
-        #             np.array(self.player_positions[agent]),  # Player's position
-        #             np.array(self.player_positions[opponent]),  # Opponent's position
-        #             self.wall_positions.flatten(),  # Wall positions
-        #             [self.remaining_walls[agent]],  # Player's remaining walls
-        #             [self.remaining_walls[opponent]],  # Opponent's remaining walls
-        #             [int(self.player_jump[agent])],  # Player's jump availability
-        #             [int(self.player_jump[opponent])]  # Opponent's jump availability
-        #         ]),
-        #         "action_mask": self.get_action_mask(agent)
-        #     }
-        # return observations
+    def action_mask(self):
+        return self.get_action_mask(self.agent_selection)
 
     def get_action_mask(self, agent):
         if agent == "player_1":
-            # print(self.player_1_action_mask)
             return self.player_1_action_mask
         else:
-            # print(self.player_2_action_mask)
             return self.player_2_action_mask
 
     #Doesn't return anything, just update states in the object so last() can use them
@@ -138,13 +117,10 @@ class Quoridor(AECEnv):
         """Executes the selected action for the current agent."""
         """Assume that the action given is valid"""
         current_agent = self.agent_selection
+        opponent = "player_1" if current_agent == "player_2" else "player_2"
         
         #call A* for current player
-        optimal_path, cost = a_star(self.player_positions[current_agent], current_agent, self.wall_positions)
-        if cost == -1:
-            print("no valid path found") #need to use this check for valid moves
-        else:
-            optimal_move = optimal_path[1]
+        pre_optimal_path, pre_cost = a_star(self.player_positions[current_agent], current_agent, self.wall_positions)
             
         #after we make step, check if optimal move is the one agent made, then add rewards
             
@@ -165,7 +141,7 @@ class Quoridor(AECEnv):
         else:
             curr_action_mask = self.player_2_action_mask
 
-        if action and curr_action_mask[action] == 1:
+        if action != None and curr_action_mask[action] == 1:
 
             if action < 4: # Pawn jump
                 self.player_jump[current_agent] = False
@@ -178,37 +154,56 @@ class Quoridor(AECEnv):
             else:  # Wall placement
                 wall_index = action - 8
                 self._place_wall(current_agent, wall_index)
+        else:
+            print("no a valid move")
+            print(action)
+            print(curr_action_mask[action])
+            print(curr_action_mask)
 
         # Check game end conditions
         if self.timestep >= 100:
             print('HAS TRUNCATED ON', current_agent)
             
             self.truncations = {"player_1" : True, "player_2" : True}
-        
-        terminations = self._check_termination(current_agent)
-        self.rewards = {}
+
+        terminations = {
+            "player_1": self.player_positions["player_1"][0] == 8,
+            "player_2": self.player_positions["player_2"][0] == 0
+        }
+
+        self.terminations = terminations
+
+        post_optimal_path, post_cost = a_star(self.player_positions[current_agent], current_agent, self.wall_positions)
+
         if terminations[current_agent]:
             # Reward the winning agent
             self.rewards[current_agent] = 1
-            self._cumulative_rewards[agent] += 1
             # Penalize others
             for other_agent in self.agents:
                 if other_agent != current_agent:
                     self.rewards[other_agent] = -1
-                    self._cumulative_rewards[other_agent] += -1
             
-        else:
-            for agent in self.agents:
-                self.rewards[agent] = 0
-                self._cumulative_rewards[agent] += 0
+        else: #not terminated or truncated
+            #just not passing api test and i don't know what to do to fix it
+
+            curr_reward = 0.1 if pre_cost > post_cost else 0
+            # self.rewards[current_agent] = curr_reward
+            # self.rewards[opponent] = -curr_reward
+
+        self._accumulate_rewards()
 
         self.agent_selection = self.agent_selector.next()
 
         # Update timestep
         self.timestep += 1
-        
+
         self.infos = {"player_1" : {"action_mask" : self.player_1_action_mask},
                       "player_2" : {"action_mask" : self.player_2_action_mask}}
+        
+        print("timestep:", self.timestep)
+        # print("reward items here:")
+        # for a, rew in self.rewards.items():
+        #     print(a, rew)
 
     #Done
     def _move_pawn(self, agent, direction):
@@ -283,6 +278,7 @@ class Quoridor(AECEnv):
         self.remaining_walls[agent] -= 1
 
         ##CHECK IF WALLS NOW BLOCK A PLAYERS PATH TO THE END
+        test_new_walls(self.player_positions, self.wall_positions, self.player_1_action_mask, self.player_2_action_mask)
 
         #If a wall is placed horizontally across a wall cannot be place veritcally going through it and vice versa
         opposite_orientation_wall_index = wall_index + 64 if orientation == 0 else wall_index - 64
@@ -293,23 +289,23 @@ class Quoridor(AECEnv):
         #same kind of case for vertical walls
         if orientation == 0: #horizontal
             if col != 0:
-                self.player_1_action_mask[wall_index-1] = 0
-                self.player_2_action_mask[wall_index-1] = 0
+                self.player_1_action_mask[8 + wall_index - 1] = 0
+                self.player_2_action_mask[8 + wall_index - 1] = 0
             if col != 7:
-                self.player_1_action_mask[wall_index+1] = 0
-                self.player_2_action_mask[wall_index+1] = 0
+                self.player_1_action_mask[8 + wall_index + 1] = 0
+                self.player_2_action_mask[8 + wall_index + 1] = 0
 
         else: #vertical
             if row != 0:
-                self.player_1_action_mask[wall_index-8] = 0
-                self.player_2_action_mask[wall_index-8] = 0
+                self.player_1_action_mask[8 + wall_index - 8] = 0
+                self.player_2_action_mask[8 + wall_index - 8] = 0
             if row != 7:
-                self.player_1_action_mask[wall_index+8] = 0
-                self.player_2_action_mask[wall_index+8] = 0
+                self.player_1_action_mask[8 + wall_index + 8] = 0
+                self.player_2_action_mask[8 + wall_index + 8] = 0
 
-        print(agent, "placed a wall")
-        print(agent, "has this many walls left", self.remaining_walls[agent])
+        # print(agent, "placed a wall")
         print("wall was placed at", row, col, orientation)
+        print(agent, "has this many walls left", self.remaining_walls[agent])
 
         if self.remaining_walls[agent] == 0:
             if agent == "player_1":
@@ -374,50 +370,20 @@ class Quoridor(AECEnv):
         row = index // (self.board_size - 1)
         col = index % (self.board_size - 1)
         return row, col, orientation
-    
-    #Done
-    def _check_termination(self, agent):
-
-        # if agent == "player_1":
-        #     if self.player_positions[agent][0] == 8:
-        #         return True
-
-        """Checks if the game has ended."""
-        terminations = {
-            "player_1": self.player_positions["player_1"][0] == 8,
-            "player_2": self.player_positions["player_2"][0] == 0
-        }
-
-        # print(terminations)
-
-        #apparently needs to remove the player?
-        # for agent, terminated in terminations.items():
-        #     if terminated and agent in self.agents:
-        #         self.agents.remove(agent)
-        return terminations
-
-
-    #TODO
-    def _calculate_rewards(self):
-        """Calculates the rewards for the agents."""
-        return {
-            agent: 0 #TODO
-            for agent in self.agents
-        }
 
     def observe(self, agent):
         """Returns the observation for the specified agent."""
         return self.get_observations(agent)
 
-    def last(self, observe=True):
-        """Returns the observation, reward, termination, truncation, and info for the current agent."""
-        agent = self.agent_selection
-        observation = self.observe(agent) if observe and agent in self.agents else None
-        reward = self.rewards.get(agent, 0)
-        termination = self.terminations.get(agent, False)
-        truncation = self.truncations.get(agent, False)
-        info = self.infos.get(agent, {})
-        return observation, reward, termination, truncation, info
+    # def last(self, observe=True):
+    #     """Returns the observation, reward, termination, truncation, and info for the current agent."""
+    #     agent = self.agent_selection
+    #     observation = self.observe(agent) if observe and agent in self.agents else None
+    #     reward = self.rewards.get(agent, 0)
+    #     termination = self.terminations.get(agent, False)
+    #     truncation = self.truncations.get(agent, False)
+    #     info = self.infos.get(agent, {})
+    #     return observation, reward, termination, truncation, info
 
 
     def render(self):
@@ -470,7 +436,7 @@ class Quoridor(AECEnv):
         pygame.display.flip()
 
         # Wait for a short time to visualize the render
-        pygame.time.wait(5000)
+        pygame.time.wait(1000)
         pygame.quit()
 
 
@@ -480,7 +446,6 @@ class Quoridor(AECEnv):
     #render doesn't open any windows (so far) so it doesn't need to do anything
     def close(self):
         pass
-
 
     # Observation space should be defined here.
     # lru_cache allows observation and action spaces to be memoized, reducing clock cycles required to get each agent's space.
