@@ -101,14 +101,12 @@ def continue_training(env_fn):
 
 if __name__ == "__main__":
     env_fn = quoridor
-    # env_fn = quoridor_v0
 
     env_kwargs = {}
 
     choice = int(input("1 to train a new model, 2 to continue training a model"))
 
-    # Train a model against itself (takes ~20 seconds on a laptop CPU)
     if choice == 1:
-        train_action_mask(env_fn, steps=100_000, seed=0, **env_kwargs)
+        train_action_mask(env_fn, steps=20_000, seed=0, **env_kwargs)
     else:
         continue_training(env_fn)

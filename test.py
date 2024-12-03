@@ -100,19 +100,19 @@ def eval_action_mask(env_fn, num_games=100, render_mode=None, **env_kwargs):
                 round_rewards.append(env.rewards)
                 break
             else:
-                act = int(
-                        model.predict(
-                            observation, action_masks=action_mask, deterministic=True
-                        )[0])
-                # if agent == env.possible_agents[1]:
-                #     act = env.action_space(agent).sample(action_mask)
-                # else:
-                #     # Note: PettingZoo expects integer actions # TODO: change chess to cast actions to type int?
-                #     act = int(
+                # act = int(
                 #         model.predict(
                 #             observation, action_masks=action_mask, deterministic=True
-                #         )[0]
-                #     )
+                #         )[0])
+                if agent == env.possible_agents[1]:
+                    act = env.action_space(agent).sample(action_mask)
+                else:
+                    # Note: PettingZoo expects integer actions # TODO: change chess to cast actions to type int?
+                    act = int(
+                        model.predict(
+                            observation, action_masks=action_mask, deterministic=True
+                        )[0]
+                    )
             env.step(act)
             env.render()
     env.close()
