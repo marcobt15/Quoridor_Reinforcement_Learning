@@ -54,7 +54,7 @@ def eval_action_mask(env_fn, num_games=100, render_mode=None, **env_kwargs):
     env = env_fn.env(**env_kwargs)
 
     print(
-        f"Starting evaluation vs a random agent. Trained agent will play as {env.possible_agents[0]}."
+        f"Starting evaluation vs a random agent. Trained agent will play as {env.possible_agents[1]}."
     )
 
     try:
@@ -100,7 +100,7 @@ def eval_action_mask(env_fn, num_games=100, render_mode=None, **env_kwargs):
                 round_rewards.append(env.rewards)
                 break
             else:
-                if agent == env.possible_agents[1]:
+                if agent == env.possible_agents[0]:
                     act = env.action_space(agent).sample(action_mask)
                 else:
                     # Note: PettingZoo expects integer actions # TODO: change chess to cast actions to type int?

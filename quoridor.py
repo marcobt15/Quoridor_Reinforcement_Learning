@@ -241,7 +241,7 @@ class Quoridor(AECEnv):
         #if they take too long then give -1 reward
         elif self.truncations[current_agent]:
             # pass
-            self.rewards = {agent: -50 for agent in self.agents}
+            self.rewards = {agent: -150 for agent in self.agents}
 
         else: #not terminated or truncated
             #just not passing api test and i don't know what to do to fix it
@@ -293,7 +293,7 @@ class Quoridor(AECEnv):
         if self.player_jump[agent] == False:
                 action_mask_update[0:4] = np.zeros(4)
                 
-        print(agent, "moved to", x, y)
+        # print(agent, "moved to", x, y)
     
         #cant jump or move up - edge of board
         if x == 0:
@@ -385,8 +385,8 @@ class Quoridor(AECEnv):
                 # self.player_1_action_mask[8 + wall_index + 8] = 0
                 # self.player_2_action_mask[8 + wall_index + 8] = 0
 
-        print(agent, "placed a wall")
-        print("wall was placed at", row, col, orientation)
+        # print(agent, "placed a wall")
+        # print("wall was placed at", row, col, orientation)
         # print(agent, "has this many walls left", self.remaining_walls[agent])
 
         #if player_1 has no walls left then remove the actions it can take
@@ -522,7 +522,7 @@ class Quoridor(AECEnv):
         pygame.display.flip()
 
         # Wait for a short time to visualize the render
-        pygame.time.wait(3000)
+        pygame.time.wait(1000)
         pygame.quit()
 
     #If render is defined then close has to be defined

@@ -88,14 +88,16 @@ def continue_training(env_fn):
     except ValueError:
         print("Policy not found.")
         exit(0)
+    
+    print("training", latest_policy)
 
     env = SB3ActionMaskWrapper(env)
     env.reset()  # Must call reset() in order to re-define the spaces
     env = ActionMasker(env, mask_fn)
 
-    model = MaskablePPO.load(latest_policy, env)
+    model = MaskablePPO.load(latest_policy, env, device="cuda")
 
-    model.learn(total_timesteps=50000)
+    model.learn(total_timesteps=50_000)
 
 if __name__ == "__main__":
     env_fn = quoridor
