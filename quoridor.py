@@ -214,7 +214,7 @@ class Quoridor(AECEnv):
             print(curr_action_mask)
 
         # Check game end conditions
-        if self.timestep >= 200:
+        if self.timestep >= 2000000:
             print('HAS TRUNCATED ON', current_agent)
             self.truncations = {"player_1" : True, "player_2" : True}
 
@@ -235,10 +235,10 @@ class Quoridor(AECEnv):
 
             # Reward the winning agent
             #higher reward for finishing faster
-            self.rewards[current_agent] = 150 - self.timestep//2
+            self.rewards[current_agent] = 10000 - self.timestep//2
 
             # Penalize others
-            self.rewards[opponent] = -150 + self.timestep//2
+            self.rewards[opponent] = -10000 + self.timestep//2
 
         #if they take too long then give -1 reward
         elif self.truncations[current_agent]:
