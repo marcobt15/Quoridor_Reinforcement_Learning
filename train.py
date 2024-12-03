@@ -82,9 +82,10 @@ def continue_training(env_fn):
     env = env_fn.env()
     
     try:
-        latest_policy = max(
-            glob.glob(f"{env.metadata['name']}*.zip"), key=os.path.getctime
-        )
+        # latest_policy = max(
+        #     glob.glob(f"{env.metadata['name']}*.zip"), key=os.path.getctime
+        # )
+        latest_policy = "quoridor_aec_v1_only_good_one.zip"
     except ValueError:
         print("Policy not found.")
         exit(0)

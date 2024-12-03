@@ -214,7 +214,7 @@ class Quoridor(AECEnv):
             print(curr_action_mask)
 
         # Check game end conditions
-        if self.timestep >= 2000000:
+        if self.timestep >= 400:
             print('HAS TRUNCATED ON', current_agent)
             self.truncations = {"player_1" : True, "player_2" : True}
 
@@ -235,10 +235,10 @@ class Quoridor(AECEnv):
 
             # Reward the winning agent
             #higher reward for finishing faster
-            self.rewards[current_agent] = 10000
+            self.rewards[current_agent] = 1000 - self.timestep//2
 
             # Penalize others
-            self.rewards[opponent] = -10000
+            self.rewards[opponent] = -1000 + self.timestep//2
 
         #if they take too long then give -1 reward
         elif self.truncations[current_agent]:
@@ -250,12 +250,11 @@ class Quoridor(AECEnv):
             #just not passing api test and i don't know what to do to fix it
             if action < 8:
                 #best path doesn't involve jumping so if they jump it should reduce the path cost by more than one getting higher reward
-                curr_reward = (pre_cost-post_cost) if pre_cost > post_cost else 0
+                curr_reward = 0.1 * (pre_cost-post_cost) if pre_cost > post_cost else 0
                 
             else:
                 #the more they block their opponent the better the reward
-                curr_reward = 0.5 * (post_opp_cost-pre_opp_cost) if pre_opp_cost < post_opp_cost else 0
-                curr_reward = 0
+                curr_reward = (post_opp_cost-pre_opp_cost) if pre_opp_cost < post_opp_cost else 0
             
             self.rewards[current_agent] = curr_reward
             self.rewards[opponent] = -curr_reward
@@ -564,14 +563,6 @@ class Quoridor(AECEnv):
 
         pygame.time.wait(750)
         pygame.display.flip()
-
-
-
-
-    #If render is defined then close has to be defined
-    #render doesn't open any windows (so far) so it doesn't need to do anything
-    def close(self):
-        pass
 
     # Observation space should be defined here.
     # lru_cache allows observation and action spaces to be memoized, reducing clock cycles required to get each agent's space.
