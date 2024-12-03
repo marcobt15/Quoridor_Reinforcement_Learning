@@ -133,7 +133,7 @@ def get_walls(board_size, wall_positions):
     return walls
 
 
-def test_new_walls(player_positions, curr_wall_positions, player_1_action_mask, player_2_action_mask):
+def test_new_walls(player_positions, curr_wall_positions, wall_action_mask):
     player_1_pos = player_positions["player_1"]
     player_2_pos = player_positions["player_2"]
 
@@ -146,26 +146,22 @@ def test_new_walls(player_positions, curr_wall_positions, player_1_action_mask, 
 
     for index, wall in enumerate(walls):
         #if there is already a wall there, don't test the position
-        if wall == 1 or (player_1_action_mask[8 + index] == 0 and player_2_action_mask[8+index] == 0):
+        if wall == 1 or wall_action_mask[index] == 0:
             continue
     
         row, col, orientation = decode_wall_index(index)
         
         curr_wall_positions[row, col, orientation] = 1
         
-        if player_1_action_mask[8 + index] == 1:
-            _, path_cost = a_star(player_1_pos, "player_1", curr_wall_positions)
-            if path_cost == -1:
-                player_1_action_mask[8 + index] = 0
-                player_2_action_mask[8 + index] = 0
-                curr_wall_positions[row, col, orientation] = 0
-                continue
+        _, path_cost = a_star(player_1_pos, "player_1", curr_wall_positions)
+        if path_cost == -1:
+            wall_action_mask[index] = 0
+            curr_wall_positions[row, col, orientation] = 0
+            continue
         
-        if player_2_action_mask[8 + index] == 1:
-            path_cost, _ = a_star(player_2_pos, "player_2", curr_wall_positions)
-            if path_cost == -1:
-                player_1_action_mask[8 + index] = 0
-                player_2_action_mask[8 + index] = 0
+        _, path_cost = a_star(player_2_pos, "player_2", curr_wall_positions)
+        if path_cost == -1:
+            wall_action_mask[index] = 0
 
         curr_wall_positions[row, col, orientation] = 0
         

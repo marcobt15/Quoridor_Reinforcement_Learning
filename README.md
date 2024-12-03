@@ -4,8 +4,8 @@ Marco Toito 101233884
 
 Run Virtual Environment with (depending on OS and terminal):
 ```
-source quoridorEnv/bin/activate //Mac
-env/Scripts/activate.bat        //Windows CMD
-env/Scripts/Activate.ps1        //Windows Poweshell
+source myenv/bin/activate //Mac
+myenv/Scripts/activate.bat        //Windows CMD
+myenv/Scripts/Activate.ps1        //Windows Poweshell
 ```
 
