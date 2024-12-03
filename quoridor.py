@@ -23,7 +23,7 @@ class Quoridor(AECEnv):
     The "name" metadata allows the environment to be pretty printed.
     """
 
-    metadata = {"name": "quoridor_aec_v1"}
+    metadata = {"name": "quoridor_aec_v3"}
     #Done
     def __init__(self, args=None):
         """Initialize the AEC Quoridor environment."""
@@ -214,7 +214,7 @@ class Quoridor(AECEnv):
             print(curr_action_mask)
 
         # Check game end conditions
-        if self.timestep >= 200:
+        if self.timestep >= 100:
             print('HAS TRUNCATED ON', current_agent)
             self.truncations = {"player_1" : True, "player_2" : True}
 
@@ -235,15 +235,15 @@ class Quoridor(AECEnv):
 
             # Reward the winning agent
             #higher reward for finishing faster
-            self.rewards[current_agent] = 150 - self.timestep
+            self.rewards[current_agent] = 100 - self.timestep//2
 
             # Penalize others
-            self.rewards[opponent] = -150 + self.timestep
+            self.rewards[opponent] = -100 + self.timestep//2
 
         #if they take too long then give -1 reward
         elif self.truncations[current_agent]:
             # pass
-            self.rewards = {agent: -150 for agent in self.agents}
+            self.rewards = {agent: -50 for agent in self.agents}
 
         else: #not terminated or truncated
             #just not passing api test and i don't know what to do to fix it
@@ -253,7 +253,7 @@ class Quoridor(AECEnv):
                 
             else:
                 #the more they block their opponent the better the reward
-                curr_reward = (post_opp_cost-pre_opp_cost) if pre_opp_cost < post_opp_cost else 0
+                curr_reward = 5*(post_opp_cost-pre_opp_cost) if pre_opp_cost < post_opp_cost else 0
 
             self.rewards[current_agent] = curr_reward
             self.rewards[opponent] = -curr_reward

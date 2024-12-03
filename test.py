@@ -54,7 +54,7 @@ def eval_action_mask(env_fn, num_games=100, render_mode=None, **env_kwargs):
     env = env_fn.env(**env_kwargs)
 
     print(
-        f"Starting evaluation vs a random agent. Trained agent will play as {env.possible_agents[1]}."
+        f"Starting evaluation vs a random agent. Trained agent will play as {env.possible_agents[0]}."
     )
 
     try:
@@ -65,7 +65,7 @@ def eval_action_mask(env_fn, num_games=100, render_mode=None, **env_kwargs):
         print("Policy not found.")
         exit(0)
 
-    print(latest_policy)
+    print("loading", latest_policy)
 
     model = MaskablePPO.load(latest_policy)
 
@@ -100,23 +100,26 @@ def eval_action_mask(env_fn, num_games=100, render_mode=None, **env_kwargs):
                 round_rewards.append(env.rewards)
                 break
             else:
-                if agent == env.possible_agents[0]:
-                    act = env.action_space(agent).sample(action_mask)
-                else:
-                    # Note: PettingZoo expects integer actions # TODO: change chess to cast actions to type int?
-                    act = int(
+                act = int(
                         model.predict(
                             observation, action_masks=action_mask, deterministic=True
-                        )[0]
-                    )
+                        )[0])
+                # if agent == env.possible_agents[1]:
+                #     act = env.action_space(agent).sample(action_mask)
+                # else:
+                #     # Note: PettingZoo expects integer actions # TODO: change chess to cast actions to type int?
+                #     act = int(
+                #         model.predict(
+                #             observation, action_masks=action_mask, deterministic=True
+                #         )[0]
+                #     )
             env.step(act)
-            env.render() #how we render but it's bad
+            env.render()
     env.close()
 
 if __name__ == "__main__":
     option = int(input("1 for api test, 2 for model test, 3 for render test:"))
     if option == 1:
-        # env = old_qouridor.Quoridor()
         # env = quoridor_v0.Quoridor_v0()
         env = quoridor.Quoridor()
         api_test(env, num_cycles=50000, verbose_progress=True)
