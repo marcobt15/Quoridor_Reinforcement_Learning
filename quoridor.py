@@ -7,8 +7,6 @@ from gymnasium.spaces import Discrete, MultiDiscrete, Dict, Box
 from pettingzoo import AECEnv
 from pettingzoo.utils import agent_selector, wrappers
 from a_star import a_star, test_new_walls
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
 
 import pygame
 
@@ -78,8 +76,6 @@ class Quoridor(AECEnv):
         self.player_1_action_mask[4] = 0
 
         self.player_2_action_mask = np.ones(4 + 4 + self.num_wall_positions, dtype='int8')
-        # self.player_2_action_mask[1] = 0
-        # self.player_2_action_mask[5] = 0
         self.player_2_action_mask[0] = 0
         self.player_2_action_mask[4] = 0
 
@@ -117,9 +113,10 @@ class Quoridor(AECEnv):
                     [self.remaining_walls[agent]],  # Player's remaining walls
                     [self.remaining_walls[opponent]],  # Opponent's remaining walls
                     [int(self.player_jump[agent])],  # Player's jump availability
-                    [int(self.player_jump[opponent])]  # Opponent's jump availability
-                ]).astype(np.int8)
-        
+                    [int(self.player_jump[opponent])],
+                    [int(self.timestep)]
+                ]).astype(np.int16)
+
         observations = {
             "observation" : observation,
             "action_mask" : self.get_action_mask(agent)
@@ -215,7 +212,7 @@ class Quoridor(AECEnv):
             print(curr_action_mask)
 
         # Check game end conditions
-        if self.timestep >= 300:
+        if self.timestep >= 200:
             print('HAS TRUNCATED ON', current_agent)
             self.truncations = {"player_1" : True, "player_2" : True}
 
@@ -235,23 +232,27 @@ class Quoridor(AECEnv):
             self.terminations = {agent: True for agent in self.agents}
 
             # Reward the winning agent
-            self.rewards[current_agent] = 100
+            #higher reward for finishing faster
+            self.rewards[current_agent] = 150 - self.timestep
 
             # Penalize others
-            self.rewards[opponent] = -100
+            self.rewards[opponent] = -150 + self.timestep
 
         #if they take too long then give -1 reward
         elif self.truncations[current_agent]:
-            self.rewards = {agent: -1 for agent in self.agents}
+            # pass
+            self.rewards = {agent: -50 for agent in self.agents}
 
         else: #not terminated or truncated
             #just not passing api test and i don't know what to do to fix it
             if action < 8:
-                curr_reward = 1 if pre_cost > post_cost else 0
+                #best path doesn't involve jumping so if they jump it should reduce the path cost by more than one getting higher reward
+                curr_reward = (pre_cost-post_cost) if pre_cost > post_cost else 0
                 
             else:
-                curr_reward = 1 if pre_opp_cost < post_opp_cost else 0
-            
+                #the more they block their opponent the better the reward
+                curr_reward = (post_opp_cost-pre_opp_cost) if pre_opp_cost < post_opp_cost else 0
+
             self.rewards[current_agent] = curr_reward
             self.rewards[opponent] = -curr_reward
 
@@ -292,7 +293,7 @@ class Quoridor(AECEnv):
         if self.player_jump[agent] == False:
                 action_mask_update[0:4] = np.zeros(4)
                 
-        # print(agent, "moved to", x, y)
+        print(agent, "moved to", x, y)
     
         #cant jump or move up - edge of board
         if x == 0:
@@ -384,8 +385,8 @@ class Quoridor(AECEnv):
                 # self.player_1_action_mask[8 + wall_index + 8] = 0
                 # self.player_2_action_mask[8 + wall_index + 8] = 0
 
-        # print(agent, "placed a wall")
-        # print("wall was placed at", row, col, orientation)
+        print(agent, "placed a wall")
+        print("wall was placed at", row, col, orientation)
         # print(agent, "has this many walls left", self.remaining_walls[agent])
 
         #if player_1 has no walls left then remove the actions it can take
@@ -524,9 +525,6 @@ class Quoridor(AECEnv):
         pygame.time.wait(3000)
         pygame.quit()
 
-
-
-
     #If render is defined then close has to be defined
     #render doesn't open any windows (so far) so it doesn't need to do anything
     def close(self):
@@ -540,7 +538,7 @@ class Quoridor(AECEnv):
         # gymnasium spaces are defined and documented here: https://gymnasium.farama.org/api/spaces/
         observation = Dict(
             {
-                "observation": MultiDiscrete([self.board_size, self.board_size, self.board_size, self.board_size] + [2] * self.num_wall_positions + [self.max_walls+1, self.max_walls+1, 2, 2], dtype=np.int8),
+                "observation": MultiDiscrete([self.board_size, self.board_size, self.board_size, self.board_size] + [2] * self.num_wall_positions + [self.max_walls+1, self.max_walls+1, 2, 2, 205], dtype=np.int16),
                 "action_mask": Box(low=0, high=1, shape=(136,), dtype=np.int8),
             }
         )

@@ -1,6 +1,5 @@
 import quoridor
 import quoridor_v0
-import old_qouridor
 from pettingzoo.test import api_test
 import glob
 from sb3_contrib import MaskablePPO
