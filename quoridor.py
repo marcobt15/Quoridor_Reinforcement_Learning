@@ -62,6 +62,8 @@ class Quoridor(AECEnv):
         self.player_jump = {"player_1": True, "player_2": True}
         self.remaining_walls = {"player_1": self.max_walls, "player_2": self.max_walls}
         self.wall_positions = np.zeros((self.board_size-1, self.board_size-1, 2))
+        self.player_wall_placement = np.zeros((self.board_size-1, self.board_size-1, 2), dtype=object)
+
 
         self.terminations = {agent: False for agent in self.possible_agents}
         self.truncations = {agent: False for agent in self.possible_agents} 
@@ -345,6 +347,15 @@ class Quoridor(AECEnv):
         """Places a wall at the given index if valid."""
         row, col, orientation = self._decode_wall_index(wall_index)
         self.wall_positions[row, col, orientation] = 1
+        if agent == "player_1":
+            player = 1
+            self.player_wall_placement[row, col, orientation] = 1
+        else:
+            player = 2
+            self.player_wall_placement[row, col, orientation] = 2
+            
+        placement_number = self.max_walls - self.remaining_walls[agent]
+        self.player_wall_placement[row, col, orientation] = (player, placement_number)
         self.remaining_walls[agent] -= 1
 
         #update action mask for both agents
@@ -472,58 +483,88 @@ class Quoridor(AECEnv):
         """Returns the observation for the specified agent."""
         return self.get_observations(agent)
 
+    def close(self):
+        """Closes the Pygame window."""
+        if hasattr(self, "screen"):
+            pygame.quit()
+
     def render(self):
-        """Renders the board using pygame."""
-        # Initialize pygame window
-        pygame.init()
-        window_size = 800
-        cell_size = window_size // self.board_size
-        screen = pygame.display.set_mode((window_size, window_size))
-        pygame.display.set_caption("Board Render")
-        screen.fill((255, 255, 255))  # White background
+        if not hasattr(self, "screen"):
+            # Initialize pygame window only once
+            pygame.init()
+            self.window_size = 800
+            self.cell_size = self.window_size // self.board_size
+            self.screen = pygame.display.set_mode((self.window_size, self.window_size))
+            pygame.display.set_caption("Quoridor Render")
 
         # Colors
         black = (0, 0, 0)
         blue = (0, 0, 255)
         red = (255, 0, 0)
-        brown = (139, 69, 19)
         white = (255, 255, 255)
+
+        # Clear the screen
+        self.screen.fill((255, 255, 255))  # White background
 
         # Draw the grid
         for x in range(self.board_size + 1):
-            pygame.draw.line(screen, black, (0, x * cell_size), (window_size, x * cell_size), 1)  # Horizontal lines
-            pygame.draw.line(screen, black, (x * cell_size, 0), (x * cell_size, window_size), 1)  # Vertical lines
+            pygame.draw.line(
+                self.screen, black, (0, x * self.cell_size), (self.window_size, x * self.cell_size), 1
+            )  # Horizontal lines
+            pygame.draw.line(
+                self.screen, black, (x * self.cell_size, 0), (x * self.cell_size, self.window_size), 1
+            )  # Vertical lines
 
         # Draw the players
         for agent, (x, y) in self.player_positions.items():
-            center_x = y * cell_size + cell_size // 2
-            center_y = x * cell_size + cell_size // 2
+            center_x = y * self.cell_size + self.cell_size // 2
+            center_y = x * self.cell_size + self.cell_size // 2
             color = blue if agent.lower() == "player_1" else red
-            pygame.draw.circle(screen, color, (center_x, center_y), cell_size // 3)
-            pygame.draw.circle(screen, black, (center_x, center_y), cell_size // 3, 2)  # Outline
-            font = pygame.font.Font(None, cell_size // 2)
-            text = font.render("P1" if agent == 'player_1' else 'P2', True, white)
+            pygame.draw.circle(self.screen, color, (center_x, center_y), self.cell_size // 3)
+            pygame.draw.circle(self.screen, black, (center_x, center_y), self.cell_size // 3, 2)  # Outline
+            font = pygame.font.Font(None, self.cell_size // 2)
+            text = font.render("P1" if agent == "player_1" else "P2", True, white)
             text_rect = text.get_rect(center=(center_x, center_y))
-            screen.blit(text, text_rect)
+            self.screen.blit(text, text_rect)
 
         # Draw the walls
+        font = pygame.font.Font(None, self.cell_size // 3)
         for row in range(self.board_size - 1):
             for col in range(self.board_size - 1):
-                if self.wall_positions[row, col, 0] == 1:  # Horizontal wall
-                    start_pos = (col * cell_size, row * cell_size + cell_size)
-                    end_pos = (start_pos[0] + 2 * cell_size, start_pos[1])
-                    pygame.draw.line(screen, brown, start_pos, end_pos, 5)
-                if self.wall_positions[row, col, 1] == 1:  # Vertical wall
-                    start_pos = (col * cell_size + cell_size, row * cell_size)
-                    end_pos = (start_pos[0], start_pos[1] + 2 * cell_size)
-                    pygame.draw.line(screen, brown, start_pos, end_pos, 5)
+                for orientation in [0, 1]:  # Check both horizontal and vertical walls
+                    if self.player_wall_placement[row, col, orientation] != 0:
+                        player, placement_number = self.player_wall_placement[row, col, orientation]
+                        color = blue if player == 1 else red
 
-        # Update display
+                        if orientation == 0:  # Horizontal wall
+                            start_pos = (col * self.cell_size, row * self.cell_size + self.cell_size)
+                            end_pos = (start_pos[0] + 2 * self.cell_size, start_pos[1])
+                        else:  # Vertical wall
+                            start_pos = (col * self.cell_size + self.cell_size, row * self.cell_size)
+                            end_pos = (start_pos[0], start_pos[1] + 2 * self.cell_size)
+
+                        pygame.draw.line(self.screen, color, start_pos, end_pos, 5)
+
+                        # Render placement number
+                        if orientation == 0:
+                            mid_x = (start_pos[0] + end_pos[0]) // 2
+                            mid_y = start_pos[1]
+                            text_rect = font.render(str(placement_number), True, black).get_rect(
+                                center=(mid_x, mid_y - 10)
+                            )
+                        else:
+                            mid_x = start_pos[0]
+                            mid_y = (start_pos[1] + end_pos[1]) // 2
+                            text_rect = font.render(str(placement_number), True, black).get_rect(
+                                center=(mid_x + 10, mid_y)
+                            )
+                        self.screen.blit(font.render(str(placement_number), True, black), text_rect)
+
+        pygame.time.wait(250)
         pygame.display.flip()
 
-        # Wait for a short time to visualize the render
-        pygame.time.wait(3000)
-        pygame.quit()
+
+
 
     #If render is defined then close has to be defined
     #render doesn't open any windows (so far) so it doesn't need to do anything
