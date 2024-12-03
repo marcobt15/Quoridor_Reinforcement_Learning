@@ -115,8 +115,8 @@ class Quoridor(AECEnv):
                     [self.remaining_walls[agent]],  # Player's remaining walls
                     [self.remaining_walls[opponent]],  # Opponent's remaining walls
                     [int(self.player_jump[agent])],  # Player's jump availability
-                    [int(self.player_jump[opponent])],
-                    [int(self.timestep)]
+                    [int(self.player_jump[opponent])]
+                    # [int(self.timestep)]
                 ]).astype(np.int16)
 
         observations = {
@@ -582,7 +582,7 @@ class Quoridor(AECEnv):
         # gymnasium spaces are defined and documented here: https://gymnasium.farama.org/api/spaces/
         observation = Dict(
             {
-                "observation": MultiDiscrete([self.board_size, self.board_size, self.board_size, self.board_size] + [2] * self.num_wall_positions + [self.max_walls+1, self.max_walls+1, 2, 2, 205], dtype=np.int16),
+                "observation": MultiDiscrete([self.board_size, self.board_size, self.board_size, self.board_size] + [2] * self.num_wall_positions + [self.max_walls+1, self.max_walls+1, 2, 2], dtype=np.int16),
                 "action_mask": Box(low=0, high=1, shape=(136,), dtype=np.int8),
             }
         )
