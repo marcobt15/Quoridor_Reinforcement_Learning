@@ -92,6 +92,20 @@ class Quoridor(AECEnv):
         """Generate observations for all agents."""
 
         opponent = "player_1" if agent == "player_2" else "player_2"
+        path, cost = a_star(self.player_positions[agent], agent, self.wall_positions)
+        opp_path, opp_cost = a_star(self.player_positions[opponent], opponent, self.wall_positions)
+
+        path_to_goal = np.zeros((self.board_size, self.board_size))
+
+        if path != -1:
+            for x, y in path:
+                path_to_goal[x][y] = 1
+
+        opp_path_to_goal = np.zeros((self.board_size, self.board_size))
+
+        if opp_path != -1:
+            for x, y in opp_path:
+                opp_path_to_goal[x][y] = 1
 
         if agent == "player_2":
             player_pos = (
@@ -103,20 +117,38 @@ class Quoridor(AECEnv):
                 self.board_size - 1 - self.player_positions[opponent][1],
             )  # Swap perspective
             wall_positions = np.flip(self.wall_positions, axis=(0, 1))  # Flip walls
+            path_to_goal = path_to_goal[::-1]
         else:
             player_pos = self.player_positions[agent]
             opponent_pos = self.player_positions[opponent]
             wall_positions = self.wall_positions
 
-        observation = np.concatenate([
-                    np.array(player_pos),  # Player's position
-                    np.array(opponent_pos),  # Opponent's position
-                    wall_positions.flatten(),  # Wall positions
-                    [self.remaining_walls[agent]],  # Player's remaining walls
-                    [self.remaining_walls[opponent]],  # Opponent's remaining walls
-                    [int(self.player_jump[agent])],  # Player's jump availability
-                    [int(self.player_jump[opponent])] # Oppoenent's jump availability
-                ]).astype(np.int16)
+        observation = np.zeros((6, self.board_size, self.board_size))  # Grid layers
+        observation[0][player_pos] = 1  # Player position
+        observation[1][opponent_pos] = 1  # Opponent position
+
+        for i in range(8):
+            for j in range(8):
+                if wall_positions[i, j, 0] == 1:  # Horizontal wall
+                    observation[2, i + 1, j] = 1  # Mark horizontal barrier
+                if wall_positions[i, j, 1] == 1:  # Vertical wall
+                    observation[3, i, j + 1] = 1  # Mark vertical barrier
+
+        
+        observation[4] = path_to_goal
+        observation[5] = opp_path_to_goal
+
+        # Add global features as a 1D vector
+        global_features = np.array([
+            self.remaining_walls[agent],
+            self.remaining_walls[opponent],
+            int(self.player_jump[agent]),
+            int(self.player_jump[opponent]),
+            max(cost, 0),
+            max(opp_cost, 0),
+        ])
+        observation = np.concatenate([observation.flatten(), global_features]).astype(np.int16)
+
 
         observations = {
             "observation" : observation,
@@ -124,7 +156,27 @@ class Quoridor(AECEnv):
         }
 
         return observations
+    
+    # Observation space should be defined here.
+    # lru_cache allows observation and action spaces to be memoized, reducing clock cycles required to get each agent's space.
+    # If your spaces change over time, remove this line (disable caching).
+    @functools.lru_cache(maxsize=None)
+    def observation_space(self, agent):
 
+        observation = Dict(
+            {
+                "observation": MultiDiscrete( [2]*6*self.board_size*self.board_size + [11, 11, 2, 2] + [self.board_size*self.board_size]*2, dtype=np.int16),
+                "action_mask": Box(low=0, high=1, shape=(136,), dtype=np.int8),
+            }
+        )
+        return observation
+
+
+    # Action space should be defined here.
+    # If your spaces change over time, remove this line (disable caching).
+    @functools.lru_cache(maxsize=None)
+    def action_space(self, agent):
+        return Discrete(4 + 4 + self.num_wall_positions)
     def action_mask(self):
         return self.get_action_mask(self.agent_selection)
 
@@ -213,7 +265,7 @@ class Quoridor(AECEnv):
             print(curr_action_mask)
 
         # Check game end conditions
-        if self.timestep >= 100:
+        if self.timestep >= 400:
             print('HAS TRUNCATED ON', current_agent)
             self.truncations = {"player_1" : True, "player_2" : True}
 
@@ -234,30 +286,76 @@ class Quoridor(AECEnv):
 
             # Reward the winning agent
             #higher reward for finishing faster
-            self.rewards[current_agent] = 100
+            self.rewards[current_agent] = 200 + (400 - self.timestep) * 0.75
 
             # Penalize others
-            self.rewards[opponent] = -100
+            self.rewards[opponent] = -200
 
-        #if they take too long then give -1 reward
-        # elif self.truncations[current_agent]:
-        #     # pass
-        #     self.rewards = {agent: -50 for agent in self.agents}
+        # if they take too long then give -1 reward
+        elif self.truncations[current_agent]:
+            # pass
+            curr_row = self.player_positions[current_agent][0] if current_agent == "player_1" else 8-self.player_positions[opponent][0]
+            rew = 0
+            if curr_row == 0:
+                rew = -100000000
+            elif curr_row == 1:
+                rew = -100000000
+            elif curr_row == 2:
+                rew = -100000
+            elif curr_row == 3:
+                rew = -10000
+            elif curr_row == 4:
+                rew = -1000
+            elif curr_row == 5:
+                rew = 25
+            elif curr_row == 6:
+                rew = 50
+            elif curr_row == 7:
+                rew = 100
+
+            self.rewards[current_agent] = rew
+            self.rewards[opponent] = -1000
 
         else: #not terminated or truncated
             
             #just not passing api test and i don't know what to do to fix it
-            if action < 8:
-                #best path doesn't involve jumping so if they jump it should reduce the path cost by more than one getting higher reward
-                curr_reward = (pre_cost - post_cost) if pre_cost > post_cost else -1
-                # curr_reward = 0
-            else:
-                #the more they block their opponent the better the reward
-                curr_reward = (post_opp_cost-pre_opp_cost) if pre_opp_cost < post_opp_cost else 0
-                # curr_reward = 0   
+            # if action < 8:
+            #     #best path doesn't involve jumping so if they jump it should reduce the path cost by more than one getting higher reward
+            #     # curr_reward = 0.1 * (pre_cost-post_cost) if pre_cost > post_cost else 0
+            #     curr_reward = 3*(pre_cost - post_cost) if pre_cost > post_cost else -3
+            #     # if original_action == 1 or original_action == 5:
+            #     #     curr_reward = max(self.player_positions[current_agent][0], 8 - self.player_positions[current_agent][0])
+            #     # elif original_action == 0 or original_action == 4:
+            #     #     curr_reward = min(-self.player_positions[current_agent][0]-1-1, -(8 - self.player_positions[current_agent][0])-1-1)
+                
+                
+                
+            # else:
+            #     #the more they block their opponent the better the reward
+            #     curr_reward = 5*(post_opp_cost-pre_opp_cost) if pre_opp_cost < post_opp_cost else 0
+            #     curr_reward = 0
 
-                curr_reward = 0
-            
+            # Reward advancing toward the goal row
+            # if current_agent == "player_1":
+            #     progress_reward = max(0, self.player_positions[current_agent][0] - self.previous_positions[current_agent][0])  # Positive if moving forward
+            # else:
+            #     progress_reward = max(0, self.previous_positions[current_agent][0] - self.player_positions[current_agent][0])  # Positive if moving forward
+            curr_reward = 0
+            progress_reward = max(0, post_cost - pre_cost)
+
+            curr_reward += progress_reward * 5  # Scale progress reward
+
+            # Reward for blocking opponent's path
+            blocking_reward = max(0, post_opp_cost - pre_opp_cost)
+            curr_reward += blocking_reward * 0.8
+
+            # Penalty for stalling
+            if progress_reward == 0 and blocking_reward == 0:
+                curr_reward -= 100 
+
+            if post_cost == -1:
+                curr_reward = -10000
+
             self.rewards[current_agent] = curr_reward
             self.rewards[opponent] = -curr_reward
 
@@ -565,24 +663,3 @@ class Quoridor(AECEnv):
 
         pygame.time.wait(750)
         pygame.display.flip()
-
-    # Observation space should be defined here.
-    # lru_cache allows observation and action spaces to be memoized, reducing clock cycles required to get each agent's space.
-    # If your spaces change over time, remove this line (disable caching).
-    @functools.lru_cache(maxsize=None)
-    def observation_space(self, agent):
-        # gymnasium spaces are defined and documented here: https://gymnasium.farama.org/api/spaces/
-        observation = Dict(
-            {
-                "observation": MultiDiscrete([self.board_size, self.board_size, self.board_size, self.board_size] + [2] * self.num_wall_positions + [self.max_walls+1, self.max_walls+1, 2, 2], dtype=np.int16),
-                "action_mask": Box(low=0, high=1, shape=(136,), dtype=np.int8),
-            }
-        )
-        return observation
-
-
-    # Action space should be defined here.
-    # If your spaces change over time, remove this line (disable caching).
-    @functools.lru_cache(maxsize=None)
-    def action_space(self, agent):
-        return Discrete(4 + 4 + self.num_wall_positions)

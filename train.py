@@ -8,7 +8,7 @@ from sb3_contrib.common.wrappers import ActionMasker
 
 import pettingzoo.utils
 import quoridor
-import quoridor_v0
+import new
 
 class SB3ActionMaskWrapper(pettingzoo.utils.BaseWrapper):
     """Wrapper to allow PettingZoo environments to be used with SB3 illegal action masking."""
@@ -108,12 +108,13 @@ def continue_training(env_fn):
 
 if __name__ == "__main__":
     env_fn = quoridor
+    # env_fn = new
 
     env_kwargs = {}
 
-    choice = int(input("1 to train a new model, 2 to continue training a model"))
+    choice = int(input("1 to train a new model, 2 to continue training a model: "))
 
     if choice == 1:
-        train_action_mask(env_fn, steps=100_000, seed=0, **env_kwargs)
+        train_action_mask(env_fn, steps=20_000, seed=0, **env_kwargs)
     else:
         continue_training(env_fn)
