@@ -250,12 +250,12 @@ class Quoridor(AECEnv):
             #just not passing api test and i don't know what to do to fix it
             if action < 8:
                 #best path doesn't involve jumping so if they jump it should reduce the path cost by more than one getting higher reward
-                curr_reward = 1 if pre_cost > post_cost else -1
+                curr_reward = (pre_cost - post_cost) if pre_cost > post_cost else -1
                 # curr_reward = 0
             else:
                 #the more they block their opponent the better the reward
-                # curr_reward = (post_opp_cost-pre_opp_cost) if pre_opp_cost < post_opp_cost else 0
-                curr_reward = 0   
+                curr_reward = (post_opp_cost-pre_opp_cost) if pre_opp_cost < post_opp_cost else 0
+                # curr_reward = 0   
 
             self.rewards[current_agent] = curr_reward
             self.rewards[opponent] = -curr_reward

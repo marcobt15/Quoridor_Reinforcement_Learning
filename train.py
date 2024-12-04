@@ -83,7 +83,7 @@ def continue_training(env_fn):
     
     try:
         latest_policy = max(
-            glob.glob(f"{env.metadata['name']}*.zip"), key=os.path.getctime
+            glob.glob(f"quoridor_aec_v3_new_movement.zip"), key=os.path.getctime
         )
         # latest_policy = "quoridor_aec_v1_only_good_one.zip"
     except ValueError:
@@ -98,7 +98,13 @@ def continue_training(env_fn):
 
     model = MaskablePPO.load(latest_policy, env, device="cuda")
 
-    model.learn(total_timesteps=50_000)
+    model.learn(total_timesteps=100_000)
+
+    model.save(f"quoridor_aec_v3_new_movement2.zip")
+
+    print("Model has been saved.")
+
+    print(f"Finished training on quoridor_aec_v3_new_movement.zip.\n")
 
 if __name__ == "__main__":
     env_fn = quoridor
