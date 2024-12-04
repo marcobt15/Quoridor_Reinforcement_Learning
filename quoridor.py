@@ -23,7 +23,7 @@ class Quoridor(AECEnv):
     The "name" metadata allows the environment to be pretty printed.
     """
 
-    metadata = {"name": "quoridor_aec_v3"}
+    metadata = {"name": "quoridor_aec_v4"}
     #Done
     def __init__(self, args=None):
         """Initialize the AEC Quoridor environment."""
@@ -245,20 +245,20 @@ class Quoridor(AECEnv):
             # pass
             self.rewards = {agent: -1000 for agent in self.agents}
 
-        # else: #not terminated or truncated
-        #     if action < 4:
-        #         curr_reward = 3*(pre_cost > post_cost) if pre_cost > post_cost else -1
-        #     #just not passing api test and i don't know what to do to fix it
-        #     if action < 8 and action >= 4:
-        #         #best path doesn't involve jumping so if they jump it should reduce the path cost by more than one getting higher reward
-        #         curr_reward = 1 if pre_cost > post_cost else -1
-        #     else:
-        #         #the more they block their opponent the better the reward
-        #         curr_reward = 3*(post_opp_cost-pre_opp_cost) if pre_opp_cost < post_opp_cost else 0
-        #         # curr_reward = 0   
+        else: #not terminated or truncated
+            if action < 4:
+                curr_reward = 3*(pre_cost > post_cost) if pre_cost > post_cost else -1
+            #just not passing api test and i don't know what to do to fix it
+            if action < 8 and action >= 4:
+                #best path doesn't involve jumping so if they jump it should reduce the path cost by more than one getting higher reward
+                curr_reward = 1 if pre_cost > post_cost else -1
+            else:
+                #the more they block their opponent the better the reward
+                curr_reward = 3*(post_opp_cost-pre_opp_cost) if pre_opp_cost < post_opp_cost else 0
+                # curr_reward = 0   
 
-            # self.rewards[current_agent] = curr_reward
-            # self.rewards[opponent] = -curr_reward
+            self.rewards[current_agent] = curr_reward
+            self.rewards[opponent] = -curr_reward
 
         self._accumulate_rewards()
 
