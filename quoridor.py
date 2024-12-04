@@ -214,7 +214,7 @@ class Quoridor(AECEnv):
             print(curr_action_mask)
 
         # Check game end conditions
-        if self.timestep >= 400:
+        if self.timestep >= 100:
             print('HAS TRUNCATED ON', current_agent)
             self.truncations = {"player_1" : True, "player_2" : True}
 
@@ -235,27 +235,28 @@ class Quoridor(AECEnv):
 
             # Reward the winning agent
             #higher reward for finishing faster
-            self.rewards[current_agent] = 1000 - self.timestep//2
+            self.rewards[current_agent] = 100
 
             # Penalize others
-            self.rewards[opponent] = -1000 + self.timestep//2
+            self.rewards[opponent] = -100
 
         #if they take too long then give -1 reward
         elif self.truncations[current_agent]:
             # pass
-            self.rewards = {agent: -50 for agent in self.agents}
+            self.rewards = {agent: -1000 for agent in self.agents}
 
         else: #not terminated or truncated
             
             #just not passing api test and i don't know what to do to fix it
             if action < 8:
                 #best path doesn't involve jumping so if they jump it should reduce the path cost by more than one getting higher reward
-                curr_reward = 0.1 * (pre_cost-post_cost) if pre_cost > post_cost else 0
-                
+                curr_reward = 1 if pre_cost > post_cost else -1
+                # curr_reward = 0
             else:
                 #the more they block their opponent the better the reward
-                curr_reward = (post_opp_cost-pre_opp_cost) if pre_opp_cost < post_opp_cost else 0
-            
+                # curr_reward = (post_opp_cost-pre_opp_cost) if pre_opp_cost < post_opp_cost else 0
+                curr_reward = 0   
+
             self.rewards[current_agent] = curr_reward
             self.rewards[opponent] = -curr_reward
 

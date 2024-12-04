@@ -58,12 +58,12 @@ def eval_action_mask(env_fn, num_games=100, render_mode=None, **env_kwargs):
     )
 
     try:
-        # latest_policy = max(
-        #     glob.glob(f"{env.metadata['name']}*.zip"), key=os.path.getctime
-        # )
         latest_policy = max(
-            glob.glob(f"quoridor_aec_v1_movement_rewards.zip"), key=os.path.getctime
+            glob.glob(f"{env.metadata['name']}*.zip"), key=os.path.getctime
         )
+        # latest_policy = max(
+        #     glob.glob(f"quoridor_aec_v1_movement_rewards.zip"), key=os.path.getctime
+        # )
     except ValueError:
         print("Policy not found.")
         exit(0)

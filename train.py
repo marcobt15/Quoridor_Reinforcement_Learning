@@ -82,10 +82,10 @@ def continue_training(env_fn):
     env = env_fn.env()
     
     try:
-        # latest_policy = max(
-        #     glob.glob(f"{env.metadata['name']}*.zip"), key=os.path.getctime
-        # )
-        latest_policy = "quoridor_aec_v1_only_good_one.zip"
+        latest_policy = max(
+            glob.glob(f"{env.metadata['name']}*.zip"), key=os.path.getctime
+        )
+        # latest_policy = "quoridor_aec_v1_only_good_one.zip"
     except ValueError:
         print("Policy not found.")
         exit(0)
@@ -108,6 +108,6 @@ if __name__ == "__main__":
     choice = int(input("1 to train a new model, 2 to continue training a model"))
 
     if choice == 1:
-        train_action_mask(env_fn, steps=50_000, seed=0, **env_kwargs)
+        train_action_mask(env_fn, steps=100_000, seed=0, **env_kwargs)
     else:
         continue_training(env_fn)
