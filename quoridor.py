@@ -239,21 +239,21 @@ class Quoridor(AECEnv):
             # Penalize others
             self.rewards[opponent] = -100
 
-        #if they take too long then give -1 reward
-        # elif self.truncations[current_agent]:
-        #     # pass
-        #     self.rewards = {agent: -50 for agent in self.agents}
+        # if they take too long then give -1 reward
+        elif self.truncations[current_agent]:
+            # pass
+            self.rewards = {agent: -1000 for agent in self.agents}
 
         else: #not terminated or truncated
             if action < 4:
-                curr_reward = 3*(pre_cost > post_cost) if pre_cost > post_cost else -1
+                curr_reward = (pre_cost > post_cost) if pre_cost > post_cost else -1
             #just not passing api test and i don't know what to do to fix it
             if action < 8 and action >= 4:
                 #best path doesn't involve jumping so if they jump it should reduce the path cost by more than one getting higher reward
                 curr_reward = 1 if pre_cost > post_cost else 0
             else:
                 #the more they block their opponent the better the reward
-                curr_reward = 5*(post_opp_cost-pre_opp_cost) if pre_opp_cost < post_opp_cost else 0
+                curr_reward = 6*(post_opp_cost-pre_opp_cost) if pre_opp_cost < post_opp_cost else 0
                 # curr_reward = 0   
 
                 curr_reward = 0
