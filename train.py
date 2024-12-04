@@ -83,7 +83,7 @@ def continue_training(env_fn):
     
     try:
         latest_policy = max(
-            glob.glob(f"quoridor_aec_v3_new_movement.zip"), key=os.path.getctime
+            glob.glob(f"quoridor_aec_v3_new_movement3_better.zip"), key=os.path.getctime
         )
         # latest_policy = "quoridor_aec_v1_only_good_one.zip"
     except ValueError:
@@ -100,11 +100,11 @@ def continue_training(env_fn):
 
     model.learn(total_timesteps=100_000)
 
-    model.save(f"quoridor_aec_v3_new_movement2.zip")
+    model.save(f"quoridor_aec_v3_new_movement3-2.zip")
 
     print("Model has been saved.")
 
-    print(f"Finished training on quoridor_aec_v3_new_movement.zip.\n")
+    print(f"Finished training on quoridor_aec_v3_new_movement3-2.zip.\n")
 
 if __name__ == "__main__":
     env_fn = quoridor

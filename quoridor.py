@@ -23,7 +23,7 @@ class Quoridor(AECEnv):
     The "name" metadata allows the environment to be pretty printed.
     """
 
-    metadata = {"name": "quoridor_aec_v3"}
+    metadata = {"name": "quoridor_aec_v4"}
     #Done
     def __init__(self, args=None):
         """Initialize the AEC Quoridor environment."""
@@ -245,15 +245,15 @@ class Quoridor(AECEnv):
         #     self.rewards = {agent: -50 for agent in self.agents}
 
         else: #not terminated or truncated
-            
+            if action < 4:
+                curr_reward = 3*(pre_cost > post_cost) if pre_cost > post_cost else -1
             #just not passing api test and i don't know what to do to fix it
-            if action < 8:
+            if action < 8 and action >= 4:
                 #best path doesn't involve jumping so if they jump it should reduce the path cost by more than one getting higher reward
-                curr_reward = (pre_cost - post_cost) if pre_cost > post_cost else -1
-                # curr_reward = 0
+                curr_reward = 1 if pre_cost > post_cost else 0
             else:
                 #the more they block their opponent the better the reward
-                curr_reward = (post_opp_cost-pre_opp_cost) if pre_opp_cost < post_opp_cost else 0
+                curr_reward = 5*(post_opp_cost-pre_opp_cost) if pre_opp_cost < post_opp_cost else 0
                 # curr_reward = 0   
 
                 curr_reward = 0
@@ -518,6 +518,7 @@ class Quoridor(AECEnv):
                 self.screen, black, (x * self.cell_size, 0), (x * self.cell_size, self.window_size), 1
             )  # Vertical lines
 
+
         # Draw the players
         for agent, (x, y) in self.player_positions.items():
             center_x = y * self.cell_size + self.cell_size // 2
@@ -525,10 +526,13 @@ class Quoridor(AECEnv):
             color = blue if agent.lower() == "player_1" else red
             pygame.draw.circle(self.screen, color, (center_x, center_y), self.cell_size // 3)
             pygame.draw.circle(self.screen, black, (center_x, center_y), self.cell_size // 3, 2)  # Outline
+
             font = pygame.font.Font(None, self.cell_size // 2)
-            text = font.render("P1" if agent == "player_1" else "P2", True, white)
+            text_color = black if self.player_jump.get(agent, False) else white  # Check player_jump status
+            text = font.render("P1" if agent == "player_1" else "P2", True, text_color)
             text_rect = text.get_rect(center=(center_x, center_y))
             self.screen.blit(text, text_rect)
+
 
         # Draw the walls
         font = pygame.font.Font(None, self.cell_size // 3)
