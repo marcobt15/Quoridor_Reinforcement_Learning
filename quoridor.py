@@ -254,11 +254,11 @@ class Quoridor(AECEnv):
             elif curr_row == 4:
                 rew = -200
             elif curr_row == 5:
-                rew = 25
+                rew = -100
             elif curr_row == 6:
-                rew = 50
+                rew = -75
             elif curr_row == 7:
-                rew = 100
+                rew = -25
 
             self.rewards[current_agent] = rew
             self.rewards[opponent] = -1000

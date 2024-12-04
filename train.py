@@ -115,6 +115,6 @@ if __name__ == "__main__":
     choice = int(input("1 to train a new model, 2 to continue training a model: "))
 
     if choice == 1:
-        train_action_mask(env_fn, steps=20_000, seed=0, **env_kwargs)
+        train_action_mask(env_fn, steps=100_000, seed=0, **env_kwargs)
     else:
         continue_training(env_fn)
