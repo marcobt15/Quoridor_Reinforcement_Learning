@@ -239,33 +239,33 @@ class Quoridor(AECEnv):
             # Penalize others
             self.rewards[opponent] = -100
             
-        elif self.truncations[current_agent]:
-            # pass
-            curr_row = self.player_positions[current_agent][0] if current_agent == "player_1" else 8-self.player_positions[opponent][0]
-            rew = 0
-            if curr_row == 0:
-                rew = -1000
-            elif curr_row == 1:
-                rew = -1000
-            elif curr_row == 2:
-                rew = -500
-            elif curr_row == 3:
-                rew = -400
-            elif curr_row == 4:
-                rew = -200
-            elif curr_row == 5:
-                rew = -100
-            elif curr_row == 6:
-                rew = -75
-            elif curr_row == 7:
-                rew = -25
-
-            self.rewards[current_agent] = rew
-            self.rewards[opponent] = -1000
-        #if they take too long then give -1 reward
         # elif self.truncations[current_agent]:
         #     # pass
-        #     self.rewards = {agent: -1000 for agent in self.agents}
+        #     curr_row = self.player_positions[current_agent][0] if current_agent == "player_1" else 8-self.player_positions[opponent][0]
+        #     rew = 0
+        #     if curr_row == 0:
+        #         rew = -1000
+        #     elif curr_row == 1:
+        #         rew = -1000
+        #     elif curr_row == 2:
+        #         rew = -500
+        #     elif curr_row == 3:
+        #         rew = -400
+        #     elif curr_row == 4:
+        #         rew = -200
+        #     elif curr_row == 5:
+        #         rew = -100
+        #     elif curr_row == 6:
+        #         rew = -75
+        #     elif curr_row == 7:
+        #         rew = -25
+
+        #     self.rewards[current_agent] = rew
+        #     self.rewards[opponent] = -1000
+        #if they take too long then give -1 reward
+        elif self.truncations[current_agent]:
+            # pass
+            self.rewards = {agent: -1000 for agent in self.agents}
 
         else: #not terminated or truncated
             if action < 4:
@@ -276,10 +276,8 @@ class Quoridor(AECEnv):
                 curr_reward = 1 if pre_cost > post_cost else 0
             else:
                 #the more they block their opponent the better the reward
-                curr_reward = 5*(post_opp_cost-pre_opp_cost) if pre_opp_cost < post_opp_cost else 0
+                curr_reward = 7*(post_opp_cost-pre_opp_cost) if pre_opp_cost < post_opp_cost else 0
                 # curr_reward = 0   
-
-                curr_reward = 0
             
             self.rewards[current_agent] = curr_reward
             self.rewards[opponent] = -curr_reward
