@@ -23,7 +23,7 @@ class Quoridor(AECEnv):
     The "name" metadata allows the environment to be pretty printed.
     """
 
-    metadata = {"name": "quoridor_aec_v4"}
+    metadata = {"name": "quoridor_aec_v6"}
     #Done
     def __init__(self, args=None):
         """Initialize the AEC Quoridor environment."""
@@ -49,6 +49,9 @@ class Quoridor(AECEnv):
         self.truncations = {agent: False for agent in self.possible_agents}
         self._cumulative_rewards = {agent: 0 for agent in self.possible_agents}
         self.reset()
+
+        #render
+        self.allow_player_control = True
 
     #Done
     def reset(self, seed=None, options=None):
@@ -269,14 +272,16 @@ class Quoridor(AECEnv):
 
         else: #not terminated or truncated
             if action < 4:
-                curr_reward = 3*(pre_cost > post_cost) if pre_cost > post_cost else -1
+                if pre_cost - post_cost > 1:
+                    curr_reward = 10*(pre_cost - post_cost) if pre_cost > post_cost else -5
+                else: curr_reward = 0
             #just not passing api test and i don't know what to do to fix it
             if action < 8 and action >= 4:
                 #best path doesn't involve jumping so if they jump it should reduce the path cost by more than one getting higher reward
-                curr_reward = 1 if pre_cost > post_cost else 0
+                curr_reward = 5 if pre_cost > post_cost else -1
             else:
                 #the more they block their opponent the better the reward
-                curr_reward = 7*(post_opp_cost-pre_opp_cost) if pre_opp_cost < post_opp_cost else 0
+                curr_reward = 10*(post_opp_cost-pre_opp_cost) if pre_opp_cost < post_opp_cost else -15
                 # curr_reward = 0   
             
             self.rewards[current_agent] = curr_reward
@@ -528,7 +533,7 @@ class Quoridor(AECEnv):
         white = (255, 255, 255)
 
         # Clear the screen
-        self.screen.fill((255, 255, 255))  # White background
+        self.screen.fill(white)  # White background
 
         # Draw the grid
         for x in range(self.board_size + 1):
@@ -538,7 +543,6 @@ class Quoridor(AECEnv):
             pygame.draw.line(
                 self.screen, black, (x * self.cell_size, 0), (x * self.cell_size, self.window_size), 1
             )  # Vertical lines
-
 
         # Draw the players
         for agent, (x, y) in self.player_positions.items():
@@ -553,7 +557,6 @@ class Quoridor(AECEnv):
             text = font.render("P1" if agent == "player_1" else "P2", True, text_color)
             text_rect = text.get_rect(center=(center_x, center_y))
             self.screen.blit(text, text_rect)
-
 
         # Draw the walls
         font = pygame.font.Font(None, self.cell_size // 3)
@@ -588,8 +591,14 @@ class Quoridor(AECEnv):
                             )
                         self.screen.blit(font.render(str(placement_number), True, black), text_rect)
 
+        # Block the game and wait for user input
+        #self.wait_for_user_action()
         pygame.time.wait(750)
+
         pygame.display.flip()
+
+    #def wait_for_user_action(self):
+       
 
     # Observation space should be defined here.
     # lru_cache allows observation and action spaces to be memoized, reducing clock cycles required to get each agent's space.
