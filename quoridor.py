@@ -465,7 +465,7 @@ class Quoridor(AECEnv):
 
     def render(self):
         if not hasattr(self, "screen"):
-            #initialize pygame window only once
+            # Initialize pygame window only once
             pygame.init()
             self.window_size = 800
             self.cell_size = self.window_size // self.board_size
@@ -479,16 +479,29 @@ class Quoridor(AECEnv):
 
         self.screen.fill(white)  
 
+        #handle events to prevent crashing
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+            elif event.type == pygame.ACTIVEEVENT:
+                #optionally handle window focus events
+                if event.state == 2:  #focus change
+                    if event.gain:
+                        print("Window gained focus.")
+                    else:
+                        print("Window lost focus.")
+
         # Draw the grid
         for x in range(self.board_size + 1):
             pygame.draw.line(
                 self.screen, black, (0, x * self.cell_size), (self.window_size, x * self.cell_size), 1
-            )  #horizontal lines
+            )  # Horizontal lines
             pygame.draw.line(
                 self.screen, black, (x * self.cell_size, 0), (x * self.cell_size, self.window_size), 1
-            )  #vertical lines
+            )  # Vertical lines
 
-        #draw the players
+        # Draw the players
         for agent, (x, y) in self.player_positions.items():
             center_x = y * self.cell_size + self.cell_size // 2
             center_y = x * self.cell_size + self.cell_size // 2
@@ -502,7 +515,7 @@ class Quoridor(AECEnv):
             text_rect = text.get_rect(center=(center_x, center_y))
             self.screen.blit(text, text_rect)
 
-        #draw the walls
+        # Draw the walls
         font = pygame.font.Font(None, self.cell_size // 3)
         for row in range(self.board_size - 1):
             for col in range(self.board_size - 1):
@@ -520,7 +533,7 @@ class Quoridor(AECEnv):
 
                         pygame.draw.line(self.screen, color, start_pos, end_pos, 5)
 
-                        #render placement number
+                        # Render placement number
                         if orientation == 0:
                             mid_x = (start_pos[0] + end_pos[0]) // 2
                             mid_y = start_pos[1]
@@ -537,6 +550,7 @@ class Quoridor(AECEnv):
 
         pygame.time.wait(50)
         pygame.display.flip()
+
 
     # Observation space should be defined here.
     # lru_cache allows observation and action spaces to be memoized, reducing clock cycles required to get each agent's space.

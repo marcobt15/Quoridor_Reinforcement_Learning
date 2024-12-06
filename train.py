@@ -79,7 +79,7 @@ def continue_training(env_fn):
     env = env_fn.env()
     
     try:
-        latest_policy = max(
+        latest_policy = max( # quoridor_aec_v3_movement+jump.zip
             glob.glob(f"quoridor_aec_v6_runs_and_walls.zip"), key=os.path.getctime
         )
         # latest_policy = "quoridor_aec_v1_only_good_one.zip"
@@ -93,7 +93,7 @@ def continue_training(env_fn):
     env.reset()  # Must call reset() in order to re-define the spaces
     env = ActionMasker(env, mask_fn)
 
-    model = MaskablePPO.load(latest_policy, env, device="cuda", custom_objects={"ent_coef":0.0075})
+    model = MaskablePPO.load(latest_policy, env, device="cuda")
 
     model.learn(total_timesteps=100_000)
 
@@ -110,6 +110,6 @@ if __name__ == "__main__":
     choice = int(input("1 to train a new model, 2 to continue training a model: "))
 
     if choice == 1:
-        train_action_mask(env_fn, steps=20_000, seed=0, **env_kwargs)
+        train_action_mask(env_fn, steps=100_000, seed=0, **env_kwargs)
     else:
         continue_training(env_fn)
