@@ -8,6 +8,15 @@ from a_star import a_star
 
 import matplotlib.pyplot as plt
 
+def encode_wall_index(row, col, orientation):
+    """Encodes row, col, and orientation into a wall index."""
+    if orientation == 1:
+        return 64 + (row * 8) + col
+    else:
+        return (row * 8) + col
+
+
+
 def eval_action_mask(env_fn, num_games=100, a_star_flag=False, simulate=False, render_mode=True, model_opponent = "", agent_player = "player_1", real_player=False, **env_kwargs):
     # Evaluate a trained agent vs a random agent
     env = env_fn.env(**env_kwargs)
@@ -51,6 +60,7 @@ def eval_action_mask(env_fn, num_games=100, a_star_flag=False, simulate=False, r
 
     for i in range(num_games):
         env.reset()
+        jump = True
         if render_mode:
             env.render()
 
@@ -119,8 +129,17 @@ def eval_action_mask(env_fn, num_games=100, a_star_flag=False, simulate=False, r
                             orientation = 0 if orientation == "h" else 1
                             row = int(input("What row would you like to place the wall: "))
                             col = int(input("What column would you like to place the wall: "))
-                            wall_pos = 8*row + col
-                            act = wall_pos if orientation == 0 else wall_pos + 64
+                            act = encode_wall_index(row, col, orientation) + 8
+
+                            if agent == "player_2":
+                                if act < 72: #horizontal wall
+                                    temp_action = act - 8 #removing the moving actions
+                                    reversed_action = 63 - temp_action #reversing the action so it's the proper way
+                                    act = reversed_action + 8 #add back the movement actions
+                                else:
+                                    temp_action = act - 72 #removing moving and horizontal wall placements
+                                    reversed_action = 63 - temp_action
+                                    act = reversed_action + 72
 
                         elif choice == 2:
                             if jump:
