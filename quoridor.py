@@ -237,52 +237,63 @@ class Quoridor(AECEnv):
 
             # Reward the winning agent
             #higher reward for finishing faster
-            self.rewards[current_agent] = 100
+            self.rewards[current_agent] = 100 + (200 - self.timestep) * 0.5
 
             # Penalize others
-            self.rewards[opponent] = -100
+            self.rewards[opponent] = -100 - (200 - self.timestep) * 0.5
             
-        # elif self.truncations[current_agent]:
-        #     # pass
-        #     curr_row = self.player_positions[current_agent][0] if current_agent == "player_1" else 8-self.player_positions[opponent][0]
-        #     rew = 0
-        #     if curr_row == 0:
-        #         rew = -1000
-        #     elif curr_row == 1:
-        #         rew = -1000
-        #     elif curr_row == 2:
-        #         rew = -500
-        #     elif curr_row == 3:
-        #         rew = -400
-        #     elif curr_row == 4:
-        #         rew = -200
-        #     elif curr_row == 5:
-        #         rew = -100
-        #     elif curr_row == 6:
-        #         rew = -75
-        #     elif curr_row == 7:
-        #         rew = -25
-
-        #     self.rewards[current_agent] = rew
-        #     self.rewards[opponent] = -1000
-        #if they take too long then give -1 reward
         elif self.truncations[current_agent]:
             # pass
-            self.rewards = {agent: -1000 for agent in self.agents}
+            curr_row = self.player_positions[current_agent][0] if current_agent == "player_1" else 8-self.player_positions[opponent][0]
+            rew = 0
+            if curr_row == 0:
+                rew = -1000
+            elif curr_row == 1:
+                rew = -1000
+            elif curr_row == 2:
+                rew = -500
+            elif curr_row == 3:
+                rew = -400
+            elif curr_row == 4:
+                rew = -200
+            elif curr_row == 5:
+                rew = -100
+            elif curr_row == 6:
+                rew = 5
+            elif curr_row == 7:
+                rew = 50
+
+            self.rewards[current_agent] = rew
+            self.rewards[opponent] = -1000
 
         else: #not terminated or truncated
-            if action < 4:
-                if pre_cost - post_cost > 1:
-                    curr_reward = 10*(pre_cost - post_cost) if pre_cost > post_cost else -5
-                else: curr_reward = 0
+            if pre_optimal_path or post_optimal_path == -1:
+                curr_reward = -1000
+            elif action < 4:
+                pre_pos = pre_optimal_path[0]
+                post_pos = post_optimal_path[0]
+                good_jump = False
+                if action == 0:
+                    if (pre_pos[1] > 0 and self.wall_positions[pre_pos[0]-1][pre_pos[1]-1][0]) or (pre_pos[1] < 8 and self.wall_positions[pre_pos[0]-1][pre_pos[1]][0]):
+                        good_jump = True 
+                elif action == 1:
+                    if (pre_pos[1] > 0 and self.wall_positions[pre_pos[0]][pre_pos[1]-1][0]) or (pre_pos[1] < 8 and self.wall_positions[pre_pos[0]][pre_pos[1]][0]):
+                        good_jump = True
+                elif action == 2:
+                    if (pre_pos[0] > 0 and self.wall_positions[pre_pos[0]-1][pre_pos[1]-1][1]) or (pre_pos[0] < 8 and self.wall_positions[pre_pos[0]][pre_pos[1]-1][1]):
+                        good_jump = True 
+                elif action == 3:
+                    if (pre_pos[0] > 0 and self.wall_positions[pre_pos[0]-1][pre_pos[1]][1]) or (pre_pos[0] < 8 and self.wall_positions[pre_pos[0]][pre_pos[1]][1]):
+                        good_jump = True 
+                
+                curr_reward = 3*(pre_cost > post_cost) if good_jump and pre_cost > post_cost else -1
             #just not passing api test and i don't know what to do to fix it
             if action < 8 and action >= 4:
                 #best path doesn't involve jumping so if they jump it should reduce the path cost by more than one getting higher reward
                 curr_reward = 5 if pre_cost > post_cost else -1
             else:
                 #the more they block their opponent the better the reward
-                curr_reward = 10*(post_opp_cost-pre_opp_cost) if pre_opp_cost < post_opp_cost else -15
-                # curr_reward = 0   
+                curr_reward = 7*(post_opp_cost-pre_opp_cost) if pre_opp_cost < post_opp_cost else 0  
             
             self.rewards[current_agent] = curr_reward
             self.rewards[opponent] = -curr_reward
@@ -591,10 +602,7 @@ class Quoridor(AECEnv):
                             )
                         self.screen.blit(font.render(str(placement_number), True, black), text_rect)
 
-        # Block the game and wait for user input
-        #self.wait_for_user_action()
         pygame.time.wait(50)
-
         pygame.display.flip()
 
     #def wait_for_user_action(self):

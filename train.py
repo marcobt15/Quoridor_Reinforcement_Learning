@@ -3,12 +3,11 @@ import glob
 import os
 
 from sb3_contrib import MaskablePPO
-from sb3_contrib.common.maskable.policies import MaskableActorCriticPolicy, MaskableActorCriticPolicy
+from sb3_contrib.common.maskable.policies import MaskableActorCriticPolicy, MaskableActorCriticCnnPolicy
 from sb3_contrib.common.wrappers import ActionMasker
 
 import pettingzoo.utils
 import quoridor
-import new
 
 class SB3ActionMaskWrapper(pettingzoo.utils.BaseWrapper):
     """Wrapper to allow PettingZoo environments to be used with SB3 illegal action masking."""
@@ -83,7 +82,7 @@ def continue_training(env_fn):
     
     try:
         latest_policy = max(
-            glob.glob(f"quoridor_aec_v3_new_movement3_better.zip"), key=os.path.getctime
+            glob.glob(f"quoridor_aec_v4_continue_best2.zip"), key=os.path.getctime
         )
         # latest_policy = "quoridor_aec_v1_only_good_one.zip"
     except ValueError:
@@ -100,21 +99,19 @@ def continue_training(env_fn):
 
     model.learn(total_timesteps=100_000)
 
-    model.save(f"quoridor_aec_v3_new_movement3-2.zip")
+    model.save(f"quoridor_aec_v4_continue_best2.zip")
 
     print("Model has been saved.")
 
-    print(f"Finished training on quoridor_aec_v3_new_movement3-2.zip.\n")
+    print(f"Finished training on quoridor_aec_v4_continue_best2.zip.\n")
 
 if __name__ == "__main__":
     env_fn = quoridor
-    # env_fn = new
-
     env_kwargs = {}
 
     choice = int(input("1 to train a new model, 2 to continue training a model: "))
 
     if choice == 1:
-        train_action_mask(env_fn, steps=100_000, seed=0, **env_kwargs)
+        train_action_mask(env_fn, steps=20_000, seed=0, **env_kwargs)
     else:
         continue_training(env_fn)

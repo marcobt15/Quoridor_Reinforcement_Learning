@@ -1,5 +1,4 @@
 import quoridor
-import new
 from pettingzoo.test import api_test
 import glob
 from sb3_contrib import MaskablePPO
@@ -14,8 +13,6 @@ def encode_wall_index(row, col, orientation):
         return 64 + (row * 8) + col
     else:
         return (row * 8) + col
-
-
 
 def eval_action_mask(env_fn, num_games=100, a_star_flag=False, simulate=False, render_mode=True, model_opponent = "", agent_player = "player_1", real_player=False, **env_kwargs):
     # Evaluate a trained agent vs a random agent
@@ -36,7 +33,7 @@ def eval_action_mask(env_fn, num_games=100, a_star_flag=False, simulate=False, r
 
     try:
         latest_policy = max(
-            glob.glob(f"quoridor_aec_v6_runs_and_walls.zip"), key=os.path.getctime
+            glob.glob(f"quoridor_aec_v4_20241205-200006.zip"), key=os.path.getctime
         )
         if model_opponent != "":     
             opponent_policy = max(
