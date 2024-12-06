@@ -8,17 +8,16 @@ from a_star import a_star
 
 import matplotlib.pyplot as plt
 
-import matplotlib.pyplot as plt
-
-import matplotlib.pyplot as plt
-
-def eval_action_mask(env_fn, num_games=100, a_star_flag=False, simulate=False, render_mode=None, model_opponent = "", agent_player = "player_1", **env_kwargs):
+def eval_action_mask(env_fn, num_games=100, a_star_flag=False, simulate=False, render_mode=True, model_opponent = "", agent_player = "player_1", real_player=False, **env_kwargs):
     # Evaluate a trained agent vs a random agent
     env = env_fn.env(**env_kwargs)
     if a_star_flag == True:
         opponent = "A star"
     elif model_opponent != "":
         opponent = model_opponent
+    elif real_player == True:
+        jump = True
+        opponent = "you"
     else :
         opponent = "random agent"
         
@@ -51,11 +50,9 @@ def eval_action_mask(env_fn, num_games=100, a_star_flag=False, simulate=False, r
     loss_rate_progression = []
 
     for i in range(num_games):
-        env.reset(seed=i)
-        if agent_player == "player_1":
-            env.action_space(env.possible_agents[0]).seed(i)#p1
-        else:
-            env.action_space(env.possible_agents[1]).seed(i)#p2
+        env.reset()
+        if render_mode:
+            env.render()
 
         game_truncated = False
         for agent in env.agent_iter():
@@ -77,71 +74,76 @@ def eval_action_mask(env_fn, num_games=100, a_star_flag=False, simulate=False, r
                 else:
                     loss_count += 1  # Increment loss count if it's not a win
                 break
-            else:
-                if agent_player == "player_1":
-                    if agent == env.possible_agents[1]:
-                        if a_star_flag:
-                            curr_position = info["position"]
-                            optimal_path, cost = a_star(curr_position, agent, info["wall_locations"])
-                            next_position = optimal_path[1]
-                            #print(optimal_path)
-                            if next_position[0] > curr_position[0]:
-                                act = 4
-                            elif next_position[0] < curr_position[0]:
-                                act = 5
-                            elif next_position[1] < curr_position[1]:
-                                act = 6
-                            elif next_position[1] > curr_position[1]:
-                                act = 7
-                            
-                        elif model_opponent != "":
-                            #print("player 2 thinking")
-                            act = int(
-                                model_opp.predict(
-                                    observation, action_masks=action_mask, deterministic=True
-                                )[0]
-                            )
-                        else:
-                            act = env.action_space(agent).sample(action_mask)
 
-                    else:
-                        act = int(
+            #game still going on
+            else:
+                if agent == agent_player:
+                    act = int(
                             model.predict(
                                 observation, action_masks=action_mask, deterministic=True
                             )[0]
                         )
                 else:
-                    if agent == env.possible_agents[0]:
-                        if not a_star_flag:
-                            curr_position = info["position"]
-                            optimal_path, cost = a_star(curr_position, agent, info["wall_locations"])
-                            next_position = optimal_path[1]
-                            #print(optimal_path)
-                            if next_position[0] > curr_position[0]:
-                                act = 5
-                            elif next_position[0] < curr_position[0]:
-                                act = 4
-                            elif next_position[1] < curr_position[1]:
+                    if a_star_flag:
+                        curr_position = info["position"]
+                        optimal_path, cost = a_star(curr_position, agent, info["wall_locations"])
+                        next_position = optimal_path[1]
+                        #print(optimal_path)
+                        if next_position[0] > curr_position[0]:
+                            act = 5
+                        elif next_position[0] < curr_position[0]:
+                            act = 4
+                        elif next_position[1] < curr_position[1]:
+                            if agent == "player_2":
                                 act = 7
-                            elif next_position[1] > curr_position[1]:
+                            else:
                                 act = 6
-
-                        elif model_opponent != "":
-                           # print("player 2 thinking")
-                            act = int(
-                                model_opp.predict(
-                                    observation, action_masks=action_mask, deterministic=True
-                                )[0]
-                            )
-                        else:
-                            act = env.action_space(agent).sample(action_mask)
-
-                    else:
+                        elif next_position[1] > curr_position[1]:
+                            if agent == "player_2":
+                                act = 6
+                            else:
+                                act = 7
+                            
+                    elif model_opponent != "":
+                        #print("player 2 thinking")
                         act = int(
-                            model.predict(
+                            model_opp.predict(
                                 observation, action_masks=action_mask, deterministic=True
                             )[0]
                         )
+
+                    elif real_player:
+                        choice = int(input("1 to place a wall and 2 to move/jump: "))
+                        if choice == 1:
+                            orientation = input("h to place a horizontal wall, v to place a vertical wall: ")
+                            row = int(input("What row would you like to place the wall: "))
+                            col = int(input("What column would you like to place the wall: "))
+                            wall_pos = 8*row + col
+                            act = wall_pos if orientation == 0 else wall_pos + 64
+
+                        elif choice == 2:
+                            move = input("wasd")
+                            to_jump = 0
+                            if jump:
+                                to_jump = int(input("0 to move, 1 to jump: "))
+
+                            direction = int(input("0 for up, 1 for down, 2 for left, 3 for right: "))
+                            if agent == "player_2":
+                                if direction == 0:
+                                    direction = 1
+                                elif direction == 1:
+                                    direction = 0
+                                elif direction == 2:
+                                    direction = 3
+                                else:
+                                    direction = 4
+                            act = direction + 4
+                            if to_jump:
+                                jump = False
+                                act -= 4
+
+                    else:
+                        act = env.action_space(agent).sample(action_mask)
   
             env.step(act)
             if render_mode:
@@ -178,11 +180,8 @@ def eval_action_mask(env_fn, num_games=100, a_star_flag=False, simulate=False, r
         plt.grid()
         plt.show()
 
-
-
-
 if __name__ == "__main__":
-    option = int(input("1 for api test, 2 for model test vs random, 3 for model test vs A*:, 4 for simulate"))
+    option = int(input("1 for api test, 2 for model test vs random, 3 for model test vs A*, 4 for simulate, 5 to play agaisnt an agent: "))
     if option == 1:
         env = quoridor.Quoridor()
         # env = new.Quoridor()
@@ -198,4 +197,8 @@ if __name__ == "__main__":
     elif option == 4:
         env_fn = quoridor
         eval_action_mask(env_fn, a_star_flag=False, simulate=True, render_mode=False, agent_player = "player_1", model_opponent = "quoridor_aec_v4_best_agent")
-            
+    elif option == 5:
+        env_fn = quoridor
+        player = int(input("Input 1 to be player1 and 2 to be player2: "))
+        player = "player_2" if player == 1 else "player_1"
+        eval_action_mask(env_fn, render_mode=True, agent_player=player, real_player=True)
