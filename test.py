@@ -116,31 +116,52 @@ def eval_action_mask(env_fn, num_games=100, a_star_flag=False, simulate=False, r
                         choice = int(input("1 to place a wall and 2 to move/jump: "))
                         if choice == 1:
                             orientation = input("h to place a horizontal wall, v to place a vertical wall: ")
+                            orientation = 0 if orientation == "h" else 1
                             row = int(input("What row would you like to place the wall: "))
                             col = int(input("What column would you like to place the wall: "))
                             wall_pos = 8*row + col
                             act = wall_pos if orientation == 0 else wall_pos + 64
 
                         elif choice == 2:
-                            move = input("wasd")
-                            to_jump = 0
                             if jump:
-                                to_jump = int(input("0 to move, 1 to jump: "))
-
-                            direction = int(input("0 for up, 1 for down, 2 for left, 3 for right: "))
-                            if agent == "player_2":
-                                if direction == 0:
-                                    direction = 1
-                                elif direction == 1:
-                                    direction = 0
-                                elif direction == 2:
-                                    direction = 3
-                                else:
-                                    direction = 4
-                            act = direction + 4
-                            if to_jump:
+                                move = input("use wasd to move and ijkl to jump")
+                            else:
+                                move = input("use wasd to move")
+                            while not jump and move in ['ijkl']:
+                                print("cannot jump anymore")
+                                move = input("use wasd to move and ijkl to jump")
+                            
+                            if jump and move == 'w':
                                 jump = False
-                                act -= 4
+                                direction = 0
+                            elif jump and move == 'a':
+                                jump = False
+                                direction = 2
+                            elif jump and move == 's':
+                                jump = False
+                                direction = 1
+                            elif jump and move == 'd':
+                                jump = False
+                                direction = 3  
+                            elif move == 'w':
+                                direction = 4
+                            elif move == 'a':
+                                direction = 5
+                            elif move == 's':
+                                direction = 6
+                            elif move == 'd':
+                                direction = 7
+
+                            if agent == "player_2":
+                                if direction == 4:
+                                    direction = 5
+                                elif direction == 5:
+                                    direction = 4
+                                elif direction == 6:
+                                    direction = 7
+                                else:
+                                    direction = 6
+                            act = direction
 
                     else:
                         act = env.action_space(agent).sample(action_mask)
