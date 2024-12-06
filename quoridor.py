@@ -593,7 +593,7 @@ class Quoridor(AECEnv):
 
         # Block the game and wait for user input
         #self.wait_for_user_action()
-        pygame.time.wait(750)
+        pygame.time.wait(50)
 
         pygame.display.flip()
 

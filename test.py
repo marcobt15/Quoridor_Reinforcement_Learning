@@ -36,7 +36,7 @@ def eval_action_mask(env_fn, num_games=100, a_star_flag=False, simulate=False, r
 
     try:
         latest_policy = max(
-            glob.glob(f"{env.metadata['name']}*.zip"), key=os.path.getctime
+            glob.glob(f"quoridor_aec_v6_runs_and_walls.zip"), key=os.path.getctime
         )
         if model_opponent != "":     
             opponent_policy = max(
@@ -74,6 +74,7 @@ def eval_action_mask(env_fn, num_games=100, a_star_flag=False, simulate=False, r
             if termination or truncation:
                 if truncation:
                     game_truncated = True
+                    truncation_count += 1
 
                 if (
                     env.rewards[env.possible_agents[0]]
@@ -82,7 +83,8 @@ def eval_action_mask(env_fn, num_games=100, a_star_flag=False, simulate=False, r
                     winner = max(env.rewards, key=env.rewards.get)
                     scores[winner] += 1  # Increment winner's score
                 else:
-                    loss_count += 1  # Increment loss count if it's not a win
+                    if not game_truncated:
+                        loss_count += 1  # Increment loss count if it's not a win
                 break
 
             #game still going on
@@ -189,9 +191,7 @@ def eval_action_mask(env_fn, num_games=100, a_star_flag=False, simulate=False, r
             if render_mode:
                 env.render()
 
-        # Track truncation
-        if game_truncated:
-            truncation_count += 1
+
 
         # Calculate metrics
         if simulate:
@@ -199,7 +199,7 @@ def eval_action_mask(env_fn, num_games=100, a_star_flag=False, simulate=False, r
             winrate = (trained_agent_wins / (i + 1)) * 100  # Convert to percentage
             truncation_rate = (truncation_count / (i + 1)) * 100  # Convert to percentage
             loss_rate = (loss_count / (i + 1)) * 100  # Convert to percentage
-
+            print(f"winrate {winrate}, truncrate {truncation_rate}, lossrate{loss_rate}")
             winrate_progression.append(winrate)
             truncation_rate_progression.append(truncation_rate)
             loss_rate_progression.append(loss_rate)
@@ -229,7 +229,7 @@ if __name__ == "__main__":
     elif option == 2:
         env_fn = quoridor
         # env_fn = new
-        eval_action_mask(env_fn)
+        eval_action_mask(env_fn, simulate=True)
     elif option == 3:
         env_fn = quoridor
         # env_fn = new
