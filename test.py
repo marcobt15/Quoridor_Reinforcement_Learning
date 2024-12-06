@@ -33,7 +33,7 @@ def eval_action_mask(env_fn, num_games=100, a_star_flag=False, simulate=False, r
 
     try:
         latest_policy = max(
-            glob.glob(f"quoridor_aec_v4_20241205-200006.zip"), key=os.path.getctime
+            glob.glob(f"quoridor_aec_v7_movement+jump.zip"), key=os.path.getctime
         )
         if model_opponent != "":     
             opponent_policy = max(
@@ -99,9 +99,15 @@ def eval_action_mask(env_fn, num_games=100, a_star_flag=False, simulate=False, r
                         next_position = optimal_path[1]
                         #print(optimal_path)
                         if next_position[0] > curr_position[0]:
-                            act = 5
+                            if agent == "player_2":
+                                act = 4
+                            else:
+                                act = 5
                         elif next_position[0] < curr_position[0]:
-                            act = 4
+                            if agent == "player_2":
+                                act = 5
+                            else:
+                                act = 4
                         elif next_position[1] < curr_position[1]:
                             if agent == "player_2":
                                 act = 7
@@ -149,29 +155,37 @@ def eval_action_mask(env_fn, num_games=100, a_star_flag=False, simulate=False, r
                                 print("cannot jump anymore")
                                 move = input("use wasd to move and ijkl to jump")
                             
-                            if jump and move == 'w':
+                            if jump and move == 'i':
                                 jump = False
                                 direction = 0
-                            elif jump and move == 'a':
+                            elif jump and move == 'j':
                                 jump = False
                                 direction = 2
-                            elif jump and move == 's':
+                            elif jump and move == 'k':
                                 jump = False
                                 direction = 1
-                            elif jump and move == 'd':
+                            elif jump and move == 'l':
                                 jump = False
                                 direction = 3  
                             elif move == 'w':
                                 direction = 4
                             elif move == 'a':
-                                direction = 5
-                            elif move == 's':
                                 direction = 6
+                            elif move == 's':
+                                direction = 5
                             elif move == 'd':
                                 direction = 7
 
                             if agent == "player_2":
-                                if direction == 4:
+                                if direction == 0:
+                                    direction = 1
+                                elif direction == 1:
+                                    direction = 0
+                                elif direction == 2:
+                                    direction = 3
+                                elif direction == 3:
+                                    direction = 2
+                                elif direction == 4:
                                     direction = 5
                                 elif direction == 5:
                                     direction = 4

@@ -235,36 +235,17 @@ class Quoridor(AECEnv):
             print(current_agent, " HAS WON")
             self.terminations = {agent: True for agent in self.agents}
 
-            # Reward the winning agent
-            #higher reward for finishing faster
-            self.rewards[current_agent] = 100 + (200 - self.timestep) * 0.5
-
-            # Penalize others
-            self.rewards[opponent] = -100 - (200 - self.timestep) * 0.5
+            self.rewards[current_agent] = 1000
+            self.rewards[opponent] = -1000
             
         elif self.truncations[current_agent]:
-            # pass
-            curr_row = self.player_positions[current_agent][0] if current_agent == "player_1" else 8-self.player_positions[opponent][0]
-            rew = 0
-            if curr_row == 0:
-                rew = -1000
-            elif curr_row == 1:
-                rew = -1000
-            elif curr_row == 2:
-                rew = -500
-            elif curr_row == 3:
-                rew = -400
-            elif curr_row == 4:
-                rew = -200
-            elif curr_row == 5:
-                rew = -100
-            elif curr_row == 6:
-                rew = 5
-            elif curr_row == 7:
-                rew = 50
 
-            self.rewards[current_agent] = rew
-            self.rewards[opponent] = -1000
+            if post_cost > post_opp_cost:
+                self.rewards[current_agent] = -1000
+            else:
+                self.rewards[current_agent] = -500
+            
+            self.rewards[opponent] = -100
 
         else: #not terminated or truncated
             if pre_optimal_path or post_optimal_path == -1:
@@ -289,11 +270,15 @@ class Quoridor(AECEnv):
                 curr_reward = 3*(pre_cost > post_cost) if good_jump and pre_cost > post_cost else -1
             #just not passing api test and i don't know what to do to fix it
             if action < 8 and action >= 4:
-                #best path doesn't involve jumping so if they jump it should reduce the path cost by more than one getting higher reward
-                curr_reward = 5 if pre_cost > post_cost else -1
+                if post_cost < post_opp_cost:
+                    curr_reward = 5 if pre_cost > post_cost else -1
+                else:
+                    curr_reward = -20
             else:
-                #the more they block their opponent the better the reward
-                curr_reward = 7*(post_opp_cost-pre_opp_cost) if pre_opp_cost < post_opp_cost else 0  
+                if post_cost - pre_cost >= post_opp_cost - pre_opp_cost:
+                    curr_reward = -40
+                else:
+                    curr_reward = 10*(post_opp_cost-pre_opp_cost) if pre_opp_cost < post_opp_cost else 0  
             
             self.rewards[current_agent] = curr_reward
             self.rewards[opponent] = -curr_reward
@@ -307,11 +292,6 @@ class Quoridor(AECEnv):
 
         self.infos = {"player_1" : {"position": self.player_positions["player_1"], "wall_locations" : self.wall_positions},
                       "player_2" : {"position": self.player_positions["player_2"], "wall_locations" : self.wall_positions}}
-        
-        # print("timestep:", self.timestep)
-        # print("reward items here:")
-        # for a, rew in self.rewards.items():
-        #     print(a, rew)
 
     #Done
     def _move_pawn(self, agent, direction):
@@ -333,7 +313,7 @@ class Quoridor(AECEnv):
         action_mask_update = np.ones(8)
         x, y = self.player_positions[agent]
         if self.player_jump[agent] == False:
-                action_mask_update[0:4] = np.zeros(4)
+            action_mask_update[0:4] = np.zeros(4)
                 
         # print(agent, "moved to", x, y)
     
@@ -466,20 +446,20 @@ class Quoridor(AECEnv):
 
         if orientation == 0: #horizontal
             #up
-            if player_1_x - 1 == row and (player_1_y == col or player_1_y == col-1):
+            if player_1_x - 1 == row and (player_1_y == col or player_1_y == col+1):
                 player_1_action_mask_update[0] = 0
 
             #down
-            elif player_1_x == row and (player_1_y == col or player_1_y == col-1):
+            elif player_1_x == row and (player_1_y == col or player_1_y == col+1):
                 player_1_action_mask_update[1] = 0
             
             #repeat for player 2
             #up
-            if player_2_x - 1 == row and (player_2_y == col or player_2_y == col-1):
+            if player_2_x - 1 == row and (player_2_y == col or player_2_y == col+1):
                 player_2_action_mask_update[0] = 0
 
             #down
-            elif player_2_x == row and (player_2_y == col or player_2_y == col-1):
+            elif player_2_x == row and (player_2_y == col or player_2_y == col+1):
                 player_2_action_mask_update[1] = 0
 
         else: #vertical

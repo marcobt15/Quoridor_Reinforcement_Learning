@@ -82,7 +82,7 @@ def continue_training(env_fn):
     
     try:
         latest_policy = max(
-            glob.glob(f"quoridor_aec_v4_continue_best2.zip"), key=os.path.getctime
+            glob.glob(f"quoridor_aec_v6_runs_and_walls.zip"), key=os.path.getctime
         )
         # latest_policy = "quoridor_aec_v1_only_good_one.zip"
     except ValueError:
@@ -95,15 +95,15 @@ def continue_training(env_fn):
     env.reset()  # Must call reset() in order to re-define the spaces
     env = ActionMasker(env, mask_fn)
 
-    model = MaskablePPO.load(latest_policy, env, device="cuda")
+    model = MaskablePPO.load(latest_policy, env, device="cuda", custom_objects={"ent_coef":0.0075})
 
     model.learn(total_timesteps=100_000)
 
-    model.save(f"quoridor_aec_v4_continue_best2.zip")
+    model.save(f"quoridor_aec_v6_runs_and_walls2.zip")
 
     print("Model has been saved.")
 
-    print(f"Finished training on quoridor_aec_v4_continue_best2.zip.\n")
+    print(f"Finished training on quoridor_aec_v6_runs_and_wallst2.zip.\n")
 
 if __name__ == "__main__":
     env_fn = quoridor
