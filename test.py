@@ -15,7 +15,7 @@ def encode_wall_index(row, col, orientation):
         return (row * 8) + col
 
 def eval_action_mask(env_fn, num_games=100, a_star_flag=False, simulate=False, render_mode=True, model_opponent = "", agent_player = "player_1", real_player=False, **env_kwargs):
-    # Evaluate a trained agent vs a random agent
+    #evaluate a trained agent vs a random agent
     env = env_fn.env(**env_kwargs)
     if a_star_flag == True:
         opponent = "A star"
@@ -33,7 +33,7 @@ def eval_action_mask(env_fn, num_games=100, a_star_flag=False, simulate=False, r
 
     try:
         latest_policy = max(
-            glob.glob(f"quoridor_aec_v7_movement+jump.zip"), key=os.path.getctime
+            glob.glob(f"quoridor_aec_v6_runs_and_walls.zip"), key=os.path.getctime
         )
         if model_opponent != "":     
             opponent_policy = max(
@@ -65,7 +65,7 @@ def eval_action_mask(env_fn, num_games=100, a_star_flag=False, simulate=False, r
         for agent in env.agent_iter():
             obs, reward, termination, truncation, info = env.last()
 
-            # Separate observation and action mask
+            #separate observation and action mask
             observation, action_mask = obs.values()
 
             if termination or truncation:
@@ -78,10 +78,10 @@ def eval_action_mask(env_fn, num_games=100, a_star_flag=False, simulate=False, r
                     != env.rewards[env.possible_agents[1]]
                 ):
                     winner = max(env.rewards, key=env.rewards.get)
-                    scores[winner] += 1  # Increment winner's score
+                    scores[winner] += 1  #increment winner's score
                 else:
                     if not game_truncated:
-                        loss_count += 1  # Increment loss count if it's not a win
+                        loss_count += 1  #increment loss count if it's not a win
                 break
 
             #game still going on
@@ -204,12 +204,12 @@ def eval_action_mask(env_fn, num_games=100, a_star_flag=False, simulate=False, r
 
 
 
-        # Calculate metrics
+        #calculate metrics
         if simulate:
             trained_agent_wins = scores[env.possible_agents[0]]
-            winrate = (trained_agent_wins / (i + 1)) * 100  # Convert to percentage
-            truncation_rate = (truncation_count / (i + 1)) * 100  # Convert to percentage
-            loss_rate = (loss_count / (i + 1)) * 100  # Convert to percentage
+            winrate = (trained_agent_wins / (i + 1)) * 100  
+            truncation_rate = (truncation_count / (i + 1)) * 100  
+            loss_rate = (loss_count / (i + 1)) * 100  
             print(f"winrate {winrate}, truncrate {truncation_rate}, lossrate{loss_rate}")
             winrate_progression.append(winrate)
             truncation_rate_progression.append(truncation_rate)
@@ -217,7 +217,7 @@ def eval_action_mask(env_fn, num_games=100, a_star_flag=False, simulate=False, r
 
     env.close()
 
-    # Plot metrics if simulate is enabled
+    #plot graphs for simulation
     if simulate:
         plt.figure(figsize=(10, 6))
         plt.plot(range(1, num_games + 1), winrate_progression, label="Winrate (%)", marker='o')
@@ -225,7 +225,7 @@ def eval_action_mask(env_fn, num_games=100, a_star_flag=False, simulate=False, r
         plt.plot(range(1, num_games + 1), loss_rate_progression, label="Loss Rate (%)", marker='s')
         plt.xlabel('Number of Games')
         plt.ylabel('Rate (%)')
-        plt.ylim(0, 100)  # Scale y-axis from 0 to 100%
+        plt.ylim(0, 100) 
         plt.title(f"Performance Metrics of {env.metadata['name']} vs {opponent}")
         plt.legend()
         plt.grid()
