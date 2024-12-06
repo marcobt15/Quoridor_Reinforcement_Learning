@@ -251,23 +251,7 @@ class Quoridor(AECEnv):
             if pre_optimal_path or post_optimal_path == -1:
                 curr_reward = -1000
             elif action < 4:
-                pre_pos = pre_optimal_path[0]
-                post_pos = post_optimal_path[0]
-                good_jump = False
-                if action == 0:
-                    if (pre_pos[1] > 0 and self.wall_positions[pre_pos[0]-1][pre_pos[1]-1][0]) or (pre_pos[1] < 8 and self.wall_positions[pre_pos[0]-1][pre_pos[1]][0]):
-                        good_jump = True 
-                elif action == 1:
-                    if (pre_pos[1] > 0 and self.wall_positions[pre_pos[0]][pre_pos[1]-1][0]) or (pre_pos[1] < 8 and self.wall_positions[pre_pos[0]][pre_pos[1]][0]):
-                        good_jump = True
-                elif action == 2:
-                    if (pre_pos[0] > 0 and self.wall_positions[pre_pos[0]-1][pre_pos[1]-1][1]) or (pre_pos[0] < 8 and self.wall_positions[pre_pos[0]][pre_pos[1]-1][1]):
-                        good_jump = True 
-                elif action == 3:
-                    if (pre_pos[0] > 0 and self.wall_positions[pre_pos[0]-1][pre_pos[1]][1]) or (pre_pos[0] < 8 and self.wall_positions[pre_pos[0]][pre_pos[1]][1]):
-                        good_jump = True 
-                
-                curr_reward = 3*(pre_cost > post_cost) if good_jump and pre_cost > post_cost else -1
+                curr_reward = 10*(pre_cost > post_cost) if  pre_cost > post_cost else -5
             #just not passing api test and i don't know what to do to fix it
             if action < 8 and action >= 4:
                 if post_cost < post_opp_cost:
