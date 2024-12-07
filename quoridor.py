@@ -491,15 +491,32 @@ class Quoridor(AECEnv):
                         print("Window gained focus.")
                     else:
                         print("Window lost focus.")
+        
+        
+        font = pygame.font.Font(None, self.cell_size // 3)
 
-        # Draw the grid
         for x in range(self.board_size + 1):
             pygame.draw.line(
                 self.screen, black, (0, x * self.cell_size), (self.window_size, x * self.cell_size), 1
             )  # Horizontal lines
+
+            if 0 < x < self.board_size:  # Avoid outermost borders
+                line_number = x - 1  # Adjust index to start from 0 for the first gap
+                row_label = font.render(str(line_number), True, black)
+                label_x = 70  # Offset from the left side
+                label_y = x * self.cell_size - self.cell_size // 2 + 25  # Center the label on the gap
+                self.screen.blit(row_label, (label_x, label_y))
+
             pygame.draw.line(
                 self.screen, black, (x * self.cell_size, 0), (x * self.cell_size, self.window_size), 1
             )  # Vertical lines
+
+            if 1 < x < self.board_size:  # Avoid outermost borders
+                line_number = x - 1  # Adjust index to start from 0 for the first gap
+                col_label = font.render(str(line_number), True, black)
+                label_x = x * self.cell_size - self.cell_size // 2 + 30 # Center the label on the gap
+                label_y = 65  # Offset from the top
+                self.screen.blit(col_label, (label_x, label_y))
 
         # Draw the players
         for agent, (x, y) in self.player_positions.items():

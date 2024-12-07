@@ -32,7 +32,8 @@ def eval_action_mask(env_fn, num_games=100, a_star_flag=False, simulate=False, r
     )
 
     try:
-        latest_policy = max(
+        latest_policy = max( #quoridor_aec_v3_movement+jump
+                            #quoridor_aec_v6_runs_and_walls
             glob.glob(f"quoridor_aec_v6_runs_and_walls.zip"), key=os.path.getctime
         )
         if model_opponent != "":     
